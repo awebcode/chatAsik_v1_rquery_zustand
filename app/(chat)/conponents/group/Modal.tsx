@@ -77,7 +77,7 @@ const GroupModal = () => {
       </button>
       <div
         className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-[600px] md:h-[700px] w-auto md:w-[700px]   transition-all duration-300 rounded-lg p-8 bg-white z-50 ${
-          isOpen ? "opacity-1 duration-500" : "opacity-0"
+          isOpen ? "block opacity-1 duration-500" : "hidden opacity-0"
         }`}
       >
         <div>

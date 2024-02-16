@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -15,6 +24,7 @@ const dotenv_1 = require("dotenv");
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const messageRoutes_1 = __importDefault(require("./routes/messageRoutes"));
+const UserModel_1 = require("./model/UserModel");
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: false }));
@@ -41,9 +51,20 @@ const checkOnlineUsers = (id, socketId) => {
         users.push({ socketId, id });
     }
 };
-const removeUser = (socketId) => {
-    users = users.filter((user) => user.socketId !== socketId);
-};
+const removeUser = (socketId) => __awaiter(void 0, void 0, void 0, function* () {
+    const removedUserIndex = users.findIndex((user) => user.socketId === socketId);
+    if (removedUserIndex !== -1) {
+        const removedUser = users[removedUserIndex];
+        users.splice(removedUserIndex, 1);
+        try {
+            //update lastActivity time
+            yield UserModel_1.User.findOneAndUpdate({ _id: removedUser.id }, { $set: { lastActive: new Date(Date.now()) } }, { new: true });
+        }
+        catch (error) {
+            console.error("Error updating lastActive:", error);
+        }
+    }
+});
 const getUser = (id) => {
     return users.find((user) => user.id === id);
 };
@@ -63,7 +84,6 @@ io.on("connection", (socket) => {
     // Handle incoming messages from clients
     socket.on("sentMessage", (message) => {
         // Broadcast the message to all connected clients
-        console.log(message);
         if (message.isGroupChat) {
             io.emit("receiveMessage", message);
         }
@@ -98,12 +118,12 @@ io.on("connection", (socket) => {
         }
     });
     // Handle client disconnection
-    socket.on("disconnect", (data) => {
-        removeUser(socket.id);
+    socket.on("disconnect", (data) => __awaiter(void 0, void 0, void 0, function* () {
+        yield removeUser(socket.id);
         // Emit the updated users array after a user disconnects
         io.emit("setup", users);
         console.log("Client disconnected");
-    });
+    }));
 });
 // Start the server
 const PORT = process.env.PORT || 5000;

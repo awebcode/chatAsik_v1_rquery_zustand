@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateChatMessageAsDeliveredController = exports.updateAllMessageStatusDelivered = exports.updateAllMessageStatusSeen = exports.updateChatMessageController = exports.sendMessage = exports.allMessages = void 0;
+exports.updateChatStatusAsBlockOrUnblock = exports.updateMessageStatusAsUnsent = exports.updateMessageStatusAsRemove = exports.updateChatMessageAsDeliveredController = exports.updateAllMessageStatusSeen = exports.updateChatMessageController = exports.sendMessage = exports.allMessages = void 0;
 const MessageModel_1 = require("../model/MessageModel");
 const UserModel_1 = require("../model/UserModel");
 const ChatModel_1 = require("../model/ChatModel");
@@ -27,7 +27,7 @@ const allMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             .sort({ updatedAt: -1 })
             .limit(limit)
             .skip(skip);
-        const total = yield MessageModel_1.Message.countDocuments();
+        const total = yield MessageModel_1.Message.countDocuments({ chat: req.params.chatId });
         res.json({ messages, total, limit });
     }
     catch (error) {
@@ -105,7 +105,10 @@ const updateAllMessageStatusSeen = (req, res, next) => __awaiter(void 0, void 0,
         yield ChatModel_1.Chat.findByIdAndUpdate(req.params.chatId, {
             latestMessage: (_d = lastMessage === null || lastMessage === void 0 ? void 0 : lastMessage.latestMessage) === null || _d === void 0 ? void 0 : _d._id,
         });
-        const updatedMessage = yield MessageModel_1.Message.find({ chat: req.params.chatId }, { status: "unseen" }).updateMany({
+        const updatedMessage = yield MessageModel_1.Message.find({ chat: req.params.chatId }, {
+            status: { $in: ["unseen", "delivered"] },
+            // sender: { $ne: req.id }
+        }).updateMany({
             status: "seen",
         });
         res.status(200).json(updatedMessage);
@@ -115,26 +118,10 @@ const updateAllMessageStatusSeen = (req, res, next) => __awaiter(void 0, void 0,
     }
 });
 exports.updateAllMessageStatusSeen = updateAllMessageStatusSeen;
-//update all messages status as Delivered
-const updateAllMessageStatusDelivered = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        if (!req.params.chatId)
-            throw new errorHandler_1.CustomErrorHandler("Chat Id  cannot be empty!", 400);
-        const updatedMessage = yield MessageModel_1.Message.find({ chat: req.params.chatId }, { status: "unseen" }).updateMany({
-            status: "delivered",
-        });
-        res.status(200).json(updatedMessage);
-    }
-    catch (error) {
-        next(error);
-    }
-});
-exports.updateAllMessageStatusDelivered = updateAllMessageStatusDelivered;
-//update all message status as delivered after reconnect a user
+//update all message status as delivered after reconnect/rejoin/login a user
 const updateChatMessageAsDeliveredController = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.params;
-        console.log({ userId }, "updateChatMessageAsDeliveredController");
         if (!userId) {
             throw new errorHandler_1.CustomErrorHandler("User Id cannot be empty!", 400);
         }
@@ -145,13 +132,15 @@ const updateChatMessageAsDeliveredController = (req, res, next) => __awaiter(voi
         }
         // Update all messages in each chat
         const updatePromises = chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
-            var _e;
+            var _e, _f;
             if (!chat.latestMessage) {
                 return; // Skip chats without a latest message
             }
             // Update the latest message's status to "delivered"
-            if (((_e = chat.latestMessage) === null || _e === void 0 ? void 0 : _e.status) === "unseen") {
+            if (((_e = chat.latestMessage) === null || _e === void 0 ? void 0 : _e.status) === "unseen" &&
+                ((_f = chat.latestMessage) === null || _f === void 0 ? void 0 : _f.sender.toString()) !== req.id) {
                 yield MessageModel_1.Message.findByIdAndUpdate(chat.latestMessage._id, { status: "delivered" }, { new: true });
+                // console.log({ sender: req.id === chat.latestMessage?.sender.toString() });
                 // Update the chat with the new latest message
                 yield ChatModel_1.Chat.findByIdAndUpdate(chat._id, {
                     latestMessage: chat.latestMessage._id,
@@ -168,3 +157,49 @@ const updateChatMessageAsDeliveredController = (req, res, next) => __awaiter(voi
     }
 });
 exports.updateChatMessageAsDeliveredController = updateChatMessageAsDeliveredController;
+///
+//update message status as remove
+const updateMessageStatusAsRemove = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { messageId, status, userId } = req.body;
+        if (!status || !messageId || !userId)
+            return new errorHandler_1.CustomErrorHandler("Message Id or status or userId cannot be empty!", 400);
+        const updateMessage = yield MessageModel_1.Message.findByIdAndUpdate(messageId, { status, removedBy: userId }, { new: true });
+        if (status === "removeFromAll") {
+            yield MessageModel_1.Message.findByIdAndDelete(messageId);
+        }
+        res.status(200).json({ success: true, updateMessage });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.updateMessageStatusAsRemove = updateMessageStatusAsRemove;
+//update message status as unsent
+const updateMessageStatusAsUnsent = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { messageId, status, userId } = req.body;
+        if (!status || !messageId || !userId)
+            return new errorHandler_1.CustomErrorHandler("Message Id or status or userId cannot be empty!", 400);
+        const updateMessage = yield MessageModel_1.Message.findByIdAndUpdate(messageId, { status, removedBy: userId }, { new: true });
+        res.status(200).json({ success: true, updateMessage });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.updateMessageStatusAsUnsent = updateMessageStatusAsUnsent;
+//update Chat status as Blocked/Unblocked
+const updateChatStatusAsBlockOrUnblock = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { chatId, status, userId } = req.body;
+        if (!status || !chatId || !userId)
+            return new errorHandler_1.CustomErrorHandler("chat Id or status or userId cannot be empty!", 400);
+        const updatedChat = yield ChatModel_1.Chat.findByIdAndUpdate(chatId, { status, blockedBy: userId }, { new: true });
+        res.status(200).json({ success: true, updatedChat });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.updateChatStatusAsBlockOrUnblock = updateChatStatusAsBlockOrUnblock;

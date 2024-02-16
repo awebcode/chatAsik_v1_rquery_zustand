@@ -1,9 +1,16 @@
 import Image from "next/image";
 import { IoIosCheckmarkCircle, IoIosCheckmarkCircleOutline } from "react-icons/io";
 import { useUserStore } from "@/store/useUser";
-export const renderStatus = (message: any, type: string, unseenMessagesCount: number) => {
+export const renderStatus = (message: any, type: string, unseenArray: any) => {
   const { currentUser } = useUserStore();
+
+  const unseenMessagesCount =
+    unseenArray?.length > 0 &&
+    unseenArray.find((item: any) => item._id === message?.chat)?.unseenMessagesCount;
+  
+  
   let statusDiv;
+  
   switch (message?.status) {
     case "seen":
       message.sender._id !== currentUser?._id && type === "onFriendListCard"
@@ -35,7 +42,6 @@ export const renderStatus = (message: any, type: string, unseenMessagesCount: nu
         ? (statusDiv = (
             <div className="h-7 w-7 relative m-1 rounded-full bg-sky-500 flex items-center justify-center">
               <span className="text-gray-900 absolute text-[10px]">
-                {" "}
                 {unseenMessagesCount > 0
                   ? unseenMessagesCount > 99
                     ? "99+"

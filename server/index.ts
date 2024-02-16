@@ -11,6 +11,7 @@ import { config } from "dotenv";
 import authRoute from "./routes/authRoutes";
 import chatRoute from "./routes/chatRoutes";
 import messageRoute from "./routes/messageRoutes";
+import { User } from "./model/UserModel";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -48,8 +49,24 @@ const checkOnlineUsers = (id: string, socketId: string) => {
     users.push({ socketId, id });
   }
 };
-const removeUser = (socketId: string) => {
-  users = users.filter((user) => user.socketId !== socketId);
+const removeUser = async (socketId: string) => {
+  const removedUserIndex = users.findIndex((user) => user.socketId === socketId);
+
+  if (removedUserIndex !== -1) {
+    const removedUser = users[removedUserIndex];
+    users.splice(removedUserIndex, 1);
+
+    try {
+      //update lastActivity time
+       await User.findOneAndUpdate(
+        { _id: removedUser.id },
+        { $set: { lastActive: new Date(Date.now()) } },
+        { new: true }
+      );
+    } catch (error) {
+      console.error("Error updating lastActive:", error);
+    }
+  }
 };
 
 const getUser = (id: string) => {
@@ -64,7 +81,7 @@ io.on("connection", (socket: Socket) => {
     console.log("Client connected");
   });
   socket.on("join", (data: any) => {
-    console.log({data})
+    console.log({ data });
     socket.join(data.chatId);
     io.emit("join", data.chatId);
   });
@@ -72,7 +89,6 @@ io.on("connection", (socket: Socket) => {
   // Handle incoming messages from clients
   socket.on("sentMessage", (message: any) => {
     // Broadcast the message to all connected clients
-    console.log(message);
     if (message.isGroupChat) {
       io.emit("receiveMessage", message);
     } else {
@@ -106,8 +122,8 @@ io.on("connection", (socket: Socket) => {
   });
 
   // Handle client disconnection
-  socket.on("disconnect", (data) => {
-    removeUser(socket.id);
+  socket.on("disconnect", async (data) => {
+    await removeUser(socket.id);
     // Emit the updated users array after a user disconnects
     io.emit("setup", users);
     console.log("Client disconnected");

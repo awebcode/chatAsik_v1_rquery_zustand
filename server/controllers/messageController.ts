@@ -23,7 +23,7 @@ export const allMessages = async (
       .limit(limit)
       .skip(skip);
 
-    const total = await Message.countDocuments();
+    const total = await Message.countDocuments({ chat: req.params.chatId });
     res.json({ messages, total, limit });
   } catch (error: any) {
     next(error);
@@ -129,7 +129,10 @@ export const updateAllMessageStatusSeen = async (
     });
     const updatedMessage = await Message.find(
       { chat: req.params.chatId },
-      { status: "unseen" }
+      {
+        status: { $in: ["unseen", "delivered"] },
+        // sender: { $ne: req.id }
+      }
     ).updateMany({
       status: "seen",
     });
@@ -139,28 +142,7 @@ export const updateAllMessageStatusSeen = async (
   }
 };
 
-//update all messages status as Delivered
-export const updateAllMessageStatusDelivered = async (
-  req: Request | any,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    if (!req.params.chatId)
-      throw new CustomErrorHandler("Chat Id  cannot be empty!", 400);
-    const updatedMessage = await Message.find(
-      { chat: req.params.chatId },
-      { status: "unseen" }
-    ).updateMany({
-      status: "delivered",
-    });
-    res.status(200).json(updatedMessage);
-  } catch (error) {
-    next(error);
-  }
-};
-
-//update all message status as delivered after reconnect a user
+//update all message status as delivered after reconnect/rejoin/login a user
 
 export const updateChatMessageAsDeliveredController = async (
   req: Request | any,
@@ -169,7 +151,6 @@ export const updateChatMessageAsDeliveredController = async (
 ) => {
   try {
     const { userId } = req.params;
-    console.log({ userId }, "updateChatMessageAsDeliveredController");
     if (!userId) {
       throw new CustomErrorHandler("User Id cannot be empty!", 400);
     }
@@ -186,14 +167,17 @@ export const updateChatMessageAsDeliveredController = async (
       if (!chat.latestMessage) {
         return; // Skip chats without a latest message
       }
-
       // Update the latest message's status to "delivered"
-      if (chat.latestMessage?.status === "unseen") {
+      if (
+        chat.latestMessage?.status === "unseen" &&
+        chat.latestMessage?.sender.toString() !== req.id
+      ) {
         await Message.findByIdAndUpdate(
           chat.latestMessage._id,
           { status: "delivered" },
           { new: true }
         );
+        // console.log({ sender: req.id === chat.latestMessage?.sender.toString() });
 
         // Update the chat with the new latest message
         await Chat.findByIdAndUpdate(chat._id, {
@@ -207,6 +191,84 @@ export const updateChatMessageAsDeliveredController = async (
 
     // Respond with success
     res.status(200).json({ success: true, message: "Messages updated as delivered" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+///
+
+//update message status as remove
+
+export const updateMessageStatusAsRemove = async (
+  req: Request | any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { messageId, status, userId } = req.body;
+    if (!status || !messageId || !userId)
+      return new CustomErrorHandler(
+        "Message Id or status or userId cannot be empty!",
+        400
+      );
+    const updateMessage = await Message.findByIdAndUpdate(
+      messageId,
+      { status, removedBy: userId },
+      { new: true }
+    );
+
+    if (status === "removeFromAll") {
+      await Message.findByIdAndDelete(messageId);
+    }
+    res.status(200).json({ success: true, updateMessage });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//update message status as unsent
+
+export const updateMessageStatusAsUnsent = async (
+  req: Request | any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { messageId, status, userId } = req.body;
+    if (!status || !messageId || !userId)
+      return new CustomErrorHandler(
+        "Message Id or status or userId cannot be empty!",
+        400
+      );
+    const updateMessage = await Message.findByIdAndUpdate(
+      messageId,
+      { status, removedBy: userId },
+      { new: true }
+    );
+    res.status(200).json({ success: true, updateMessage });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//update Chat status as Blocked/Unblocked
+
+export const updateChatStatusAsBlockOrUnblock = async (
+  req: Request | any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { chatId, status, userId } = req.body;
+    if (!status || !chatId || !userId)
+      return new CustomErrorHandler("chat Id or status or userId cannot be empty!", 400);
+    const updatedChat = await Chat.findByIdAndUpdate(
+      chatId,
+      { status, blockedBy: userId },
+      { new: true }
+    );
+    res.status(200).json({ success: true, updatedChat });
   } catch (error) {
     next(error);
   }

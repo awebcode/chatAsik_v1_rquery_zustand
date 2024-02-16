@@ -11,9 +11,9 @@ const QueryProvider = ({ children }: { children: ReactNode }) => {
             // With SSR, we usually want to set some default staleTime
             // above 0 to avoid refetching immediately on the client
             staleTime: 60 * 1000,
-            refetchOnWindowFocus: true,
-            refetchOnMount: true,
-            refetchOnReconnect:true
+            // refetchOnWindowFocus: true,
+            // refetchOnMount: true,
+            // refetchOnReconnect:true
           },
         },
       })

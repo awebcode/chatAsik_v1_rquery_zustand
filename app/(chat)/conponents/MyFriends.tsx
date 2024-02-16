@@ -69,7 +69,7 @@ const MyFriends = () => {
                   chats.map((chat: any) => (
                     <FriendsCard
                       chat={chat}
-                      unseenMessagesCount={data?.pages[0].unseenMessagesCount}
+                      unseenArray={data?.pages[0].unseenCountArray}
                       key={chat._id}
                     />
                   ))

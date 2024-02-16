@@ -33,11 +33,10 @@ export const sentMessage = async (body: any) => {
   return data;
 };
 
-
 type TupdateStatus = {
   chatId: string;
   status: string;
-}
+};
 
 //update  message status
 export const updateMessageStatus = async (body: TupdateStatus) => {
@@ -49,7 +48,7 @@ export const updateMessageStatus = async (body: TupdateStatus) => {
 };
 
 //update all  message status
-export const updateAllMessageStatusAsSeen = async (chatId:string) => {
+export const updateAllMessageStatusAsSeen = async (chatId: string) => {
   const { data } = await axiosClient.put(`/updateMessageStatusSeen/${chatId}`, {
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
@@ -60,6 +59,33 @@ export const updateAllMessageStatusAsSeen = async (chatId:string) => {
 //update all  message status as Delivered
 export const updateAllMessageStatusAsDelivered = async (userId: string) => {
   const { data } = await axiosClient.put(`/updateMessageStatusDelivered/${userId}`, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};
+
+//update all  message status as Remove
+export const updateAllMessageStatusAsRemove = async (userData: any) => {
+  const { data } = await axiosClient.put(`/updateMessageStatusRemove`, userData, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};
+
+//update all  message status as Unsent
+export const updateAllMessageStatusAsUnsent = async (userData: any) => {
+  const { data } = await axiosClient.put(`/updateMessageStatusUnsent`, userData, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};
+
+//update chat status as Block/Unblock
+export const updateAllChatStatusAsBlock = async (userData: any) => {
+  const { data } = await axiosClient.put(`/updateChatStatusAsBlockOUnblock`, userData, {
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
   });

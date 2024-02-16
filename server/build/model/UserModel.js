@@ -19,5 +19,9 @@ const userSchema = new mongoose_1.default.Schema({
         required: true,
         default: false,
     },
+    lastActive: {
+        type: Date,
+        // default: Date.now,
+    },
 });
 exports.User = mongoose_1.default.model("User", userSchema);

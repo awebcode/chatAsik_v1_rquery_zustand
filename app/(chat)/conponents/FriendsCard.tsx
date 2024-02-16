@@ -27,8 +27,8 @@ type TChat = {
 
 const FriendsCard: React.FC<{
   chat: TChat | any;
-  unseenMessagesCount: number;
-}> = ({ chat, unseenMessagesCount }) => {
+  unseenArray: any;
+}> = ({ chat, unseenArray }) => {
   const { socket } = useChatContext();
   const { setSelectedChat } = useChatStore();
   const { currentUser } = useUserStore();
@@ -86,13 +86,17 @@ const FriendsCard: React.FC<{
       userId: getSenderFull(currentUser, chat.users)?._id,
     };
     mutaion.mutateAsync(data as any);
-    updateStatusMutation.mutateAsync(chatId);
+    if (chat?.latestMessage?.status === "unseen") {
+      updateStatusMutation.mutateAsync(chatId);
+    }
   };
   const isUserOnline = onlineUsers.some((u: any) =>
     chat.isGroupChat
       ? chat.users.some((user: any) => user._id === u.id)
       : getSenderFull(currentUser, chat.users)?._id === u.id
   );
+
+  console.log({});
   return (
     <div
       onClick={() => handleClick(chat._id as string)}
@@ -141,14 +145,23 @@ const FriendsCard: React.FC<{
               <span className="text-[10px] font-bold block">Start new conversation</span>
             )}
           </span>
-          <span className="text-[10px] font-thin block">
+          <span className="text-[9px] font-thin block">
             {chat?.latestMessage?.content
               ? moment(chat?.latestMessage?.createdAt).format("llll")
               : moment(chat?.createdAt).format("lll")}
           </span>
+          {!isUserOnline && !chat.isGroupChat ? (
+            <span className="text-[9px]">
+              LastActive:{" "}
+              {moment(getSenderFull(currentUser, chat.users)?.lastActive).format("lll")}
+            </span>
+          ) : (
+            ""
+          )}
         </div>
+
         <div className="mx-2">
-          {renderStatus(chat?.latestMessage, "onFriendListCard", unseenMessagesCount)}
+          {renderStatus(chat?.latestMessage, "onFriendListCard", unseenArray)}
         </div>
       </div>
     </div>

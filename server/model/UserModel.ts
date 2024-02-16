@@ -15,6 +15,10 @@ const userSchema = new mongoose.Schema({
     required: true,
     default: false,
   },
+  lastActive: {
+    type: Date,
+    // default: Date.now,
+  },
 });
 
 export const User = mongoose.model("User", userSchema);

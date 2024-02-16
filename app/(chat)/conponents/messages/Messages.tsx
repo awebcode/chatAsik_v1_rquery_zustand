@@ -49,7 +49,6 @@ const Messages = () => {
     const container = containerRef.current as any;
     //check if scroll up greater than -200
     const handleScroll = () => {
-      console.log({ scroll: container.scrollTop });
       setUserScrolledUp(container.scrollTop);
     };
     const scrollToBottom = () => {

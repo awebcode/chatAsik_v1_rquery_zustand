@@ -3,10 +3,12 @@ import authMiddleware from "../middlewares/authMiddleware";
 import {
   allMessages,
   sendMessage,
-  updateAllMessageStatusDelivered,
   updateAllMessageStatusSeen,
   updateChatMessageAsDeliveredController,
   updateChatMessageController,
+  updateChatStatusAsBlockOrUnblock,
+  updateMessageStatusAsRemove,
+  updateMessageStatusAsUnsent,
 } from "../controllers/messageController";
 
 const messageRoute = express.Router();
@@ -19,11 +21,26 @@ messageRoute
 messageRoute
   .route("/updateMessageStatusSeen/:chatId")
   .put(authMiddleware, updateAllMessageStatusSeen);
-// messageRoute
-//   .route("/updateMessageStatusDelivered/:chatId")
-//   .put(authMiddleware, updateAllMessageStatusDelivered);
-//update All messages status after rejoin a user
+
+//update All messages status after rejoin/login a user
 messageRoute
   .route("/updateMessageStatusDelivered/:userId")
   .put(authMiddleware, updateChatMessageAsDeliveredController);
+
+//update messesage status as remove
+
+messageRoute
+  .route("/updateMessageStatusRemove")
+  .put(authMiddleware, updateMessageStatusAsRemove);
+
+//update messesage status as unsent
+messageRoute
+  .route("/updateMessageStatusUnsent")
+  .put(authMiddleware, updateMessageStatusAsUnsent);
+
+//update messesage status as Block/Unblock
+
+messageRoute.route("/updateChatStatusAsBlockOUnblock").put(authMiddleware, updateChatStatusAsBlockOrUnblock);
+
+
 export default messageRoute;

@@ -10,12 +10,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addToGroup = exports.removeFromGroup = exports.renameGroup = exports.createGroupChat = exports.fetchChats = exports.accessChat = void 0;
 const errorHandler_1 = require("../middlewares/errorHandler");
 const ChatModel_1 = require("../model/ChatModel");
 const UserModel_1 = require("../model/UserModel");
 const MessageModel_1 = require("../model/MessageModel");
+const mongoose_1 = __importDefault(require("mongoose"));
 //@access          Protected
 const accessChat = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.body;
@@ -33,7 +37,7 @@ const accessChat = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         .populate("latestMessage");
     isChat = yield UserModel_1.User.populate(isChat, {
         path: "latestMessage.sender",
-        select: "name pic email",
+        select: "name pic email lastActive",
     });
     if (isChat.length > 0) {
         res.send(isChat[0]);
@@ -46,7 +50,7 @@ const accessChat = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         };
         try {
             const createdChat = yield ChatModel_1.Chat.create(chatData);
-            const FullChat = yield ChatModel_1.Chat.findOne({ _id: createdChat._id }).populate("users", "-password");
+            const FullChat = yield ChatModel_1.Chat.findOne({ _id: createdChat._id }).populate("users", "-password lastActive");
             res.status(200).json(FullChat);
         }
         catch (error) {
@@ -55,44 +59,13 @@ const accessChat = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.accessChat = accessChat;
-//@description     Fetch all chats for a user
-//@route           GET /api/chat/
-//@access          Protected
-// export const fetchChats = async (
-//   req: Request | any,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//      const limit = parseInt(req.query.limit) || 4;
-//     const skip = parseInt(req.query.skip) || 0;
-//      const keyword = req.query.search
-//        ? {
-//            $or: [
-//              { username: { $regex: req.query.search, $options: "i" } },
-//              { email: { $regex: req.query.search, $options: "i" } },
-//            ],
-//          }
-//        : {};
-//     Chat.find({ users: { $elemMatch: { $eq: req.id } } })
-//       .populate("users", "-password")
-//       .populate("groupAdmin", "-password")
-//       .populate("latestMessage")
-//       .sort({ updatedAt: -1 })
-//       .then(async (results:any) => {
-//         results = await User.populate(results, {
-//           path: "latestMessage.sender",
-//           select: "username pic email",
-//         });
-//         res.status(200).send({ users: results });
-//       });
-//   } catch (error: any) {
-//     next(error);
-//   }
-// };
 const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const unseenMessagesCount = yield MessageModel_1.Message.find({ status: "unseen" }).countDocuments();
+        const unseenMessagesCount = yield MessageModel_1.Message.find({
+            //  chat:req.params.
+            status: { $in: ["unseen", "delivered"] },
+            sender: { $ne: req.id },
+        }).countDocuments();
         const limit = parseInt(req.query.limit) || 4;
         const skip = parseInt(req.query.skip) || 0;
         const keyword = req.query.search
@@ -103,6 +76,8 @@ const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
                 ],
             }
             : {};
+        const unseenCount = yield unseenMessagesCounts(limit, skip, keyword, req.id);
+        // console.log({unseenCount})
         // Count the total documents matching the keyword
         const totalDocs = yield ChatModel_1.Chat.countDocuments({
             users: { $elemMatch: { $eq: req.id } },
@@ -118,7 +93,7 @@ const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             .limit(limit);
         const populatedChats = yield UserModel_1.User.populate(chats, {
             path: "latestMessage.sender",
-            select: "username pic email",
+            select: "username pic email lastActive",
         });
         // Filter the populatedChats array based on the keyword
         let filteredChats = [];
@@ -126,10 +101,6 @@ const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             filteredChats = populatedChats.filter((chat) => chat.users.some((user) => user.username.match(new RegExp(keyword.$or[0].username.$regex, "i")) ||
                 user.email.match(new RegExp(keyword.$or[1].email.$regex, "i"))));
         }
-        // const all = await Chat.find({
-        //   users: { $elemMatch: { $eq: req.id } },
-        // });
-        // console.log({all})
         res.status(200).send({
             chats: filteredChats.length > 0 ? filteredChats : req.query.search ? [] : populatedChats,
             total: filteredChats.length > 0
@@ -138,7 +109,7 @@ const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
                     ? 0
                     : totalDocs,
             limit,
-            unseenMessagesCount,
+            unseenCountArray: unseenCount,
         });
     }
     catch (error) {
@@ -147,6 +118,62 @@ const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.fetchChats = fetchChats;
+//unseenMessagesCounts for every single chat
+const unseenMessagesCounts = (limit, skip, keyword, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const unseenCount = yield ChatModel_1.Chat.aggregate([
+            {
+                $match: {
+                    users: { $elemMatch: { $eq: new mongoose_1.default.Types.ObjectId(userId) } },
+                },
+            },
+            {
+                $lookup: {
+                    from: "messages",
+                    localField: "_id",
+                    foreignField: "chat",
+                    as: "messages",
+                },
+            },
+            {
+                $unwind: "$messages",
+            },
+            {
+                $match: keyword,
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    unseenMessagesCount: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        { $ne: ["$messages.sender", new mongoose_1.default.Types.ObjectId(userId)] },
+                                        { $in: ["$messages.status", ["unseen", "delivered"]] },
+                                    ],
+                                },
+                                1,
+                                0,
+                            ],
+                        },
+                    },
+                },
+            },
+            {
+                $sort: { updatedAt: -1 },
+            },
+            {
+                $skip: skip,
+            },
+            {
+                $limit: limit,
+            },
+        ]);
+        return unseenCount;
+    }
+    catch (error) { }
+});
 //@description     Create New Group Chat
 //@route           POST /api/chat/group
 //@access          Protected

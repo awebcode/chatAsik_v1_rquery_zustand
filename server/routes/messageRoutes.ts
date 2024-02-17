@@ -2,6 +2,8 @@ import express from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import {
   allMessages,
+  editMessage,
+  replyMessage,
   sendMessage,
   updateAllMessageStatusSeen,
   updateChatMessageAsDeliveredController,
@@ -40,7 +42,12 @@ messageRoute
 
 //update messesage status as Block/Unblock
 
-messageRoute.route("/updateChatStatusAsBlockOUnblock").put(authMiddleware, updateChatStatusAsBlockOrUnblock);
+messageRoute
+  .route("/updateChatStatusAsBlockOUnblock")
+  .put(authMiddleware, updateChatStatusAsBlockOrUnblock);
+//editMessage
 
-
+messageRoute.route("/editMessage").put(authMiddleware, editMessage);
+//replyMessage
+messageRoute.route("/replyMessage").post(authMiddleware, replyMessage);
 export default messageRoute;

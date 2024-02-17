@@ -84,8 +84,28 @@ export const updateAllMessageStatusAsUnsent = async (userData: any) => {
 };
 
 //update chat status as Block/Unblock
-export const updateAllChatStatusAsBlock = async (userData: any) => {
+export const updateChatStatusAsBlockOUnblock = async (userData: any) => {
   const { data } = await axiosClient.put(`/updateChatStatusAsBlockOUnblock`, userData, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};
+
+
+//ReplyMessage
+export const replyMessage = async (messageData: any) => {
+  const { data } = await axiosClient.post(`/replyMessage`, messageData, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};
+
+
+//editMessage
+export const editMessage = async (messageData: any) => {
+  const { data } = await axiosClient.put(`/editMessage`, messageData, {
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
   });

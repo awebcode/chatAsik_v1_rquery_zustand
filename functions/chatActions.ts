@@ -59,3 +59,13 @@ export const addToGroup = async (id: string) => {
   });
   return data;
 };
+
+
+//Delete Single Chat
+export const deleteSingleChat = async (id: string) => {
+  const { data } = await axiosClient.delete(`/deleteSingleChat/${id}`, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};

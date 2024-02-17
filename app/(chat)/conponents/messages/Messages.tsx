@@ -113,7 +113,7 @@ const Messages = () => {
           ref={containerRef}
           // onScroll={handleScroll}
           id="CustomscrollableTarget"
-          className="menu p-4 bg-base-200 h-[80vh] overflow-y-scroll flex flex-col-reverse"
+          className="menu p-4 bg-base-200 h-[80vh] overflow-y-scroll overflow-x-hidden flex flex-col-reverse"
         >
           <div className="init_profile">
             {messages.length === 0 && <NoChatProfile user={selectedChat as any} />}{" "}
@@ -140,6 +140,7 @@ const Messages = () => {
             style={{ display: "flex", flexDirection: "column-reverse" }}
             inverse={true}
             scrollableTarget="CustomscrollableTarget"
+            scrollThreshold={1}
           >
             <div className="flex flex-col gap-5">
               {messages &&

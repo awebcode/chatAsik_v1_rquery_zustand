@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import dynamic from "next/dynamic";
 
-const ChatHeader = dynamic(() => import("./ChatHeader"));
+const ChatHeader = dynamic(() => import("./chatHeader/ChatHeader"));
 const Messages = dynamic(() => import("./messages/Messages"));
 
 const Input = dynamic(() => import("./Input"));

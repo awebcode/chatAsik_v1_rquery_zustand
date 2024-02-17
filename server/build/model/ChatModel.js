@@ -14,5 +14,9 @@ const chatModel = new mongoose_1.default.Schema({
         ref: "Message",
     },
     groupAdmin: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
+    chatStatus: {
+        status: { type: String, enum: ["blocked", "unblocked", "muted", "archive"] },
+        updatedBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
+    },
 }, { timestamps: true });
 exports.Chat = mongoose_1.default.model("Chat", chatModel);

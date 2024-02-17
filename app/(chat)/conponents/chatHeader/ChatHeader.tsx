@@ -1,12 +1,22 @@
 import { useChatStore } from "@/store/useChat";
 import { useOnlineUsersStore } from "@/store/useOnlineUsers";
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
 import { FaArrowLeft, FaBeer } from "react-icons/fa";
+import { BsThreeDots } from "react-icons/bs";
+import UserModal from "./UserModal";
+import { useClickAway } from "@uidotdev/usehooks";
+import { MdCall, MdVideoCall } from "react-icons/md";
+
 const ChatHeader = () => {
   const { selectedChat, clearselectedChat } = useChatStore();
   const { onlineUsers } = useOnlineUsersStore();
+  const [open, setOpen] = useState(false);
   const isUserOnline = onlineUsers.some((u: any) => u.id === selectedChat?.userId);
+  const userModalRef: any = useClickAway(() => {
+    setOpen(false);
+  });
+
   return (
     <div className="p-4 bg-gray-800 flexBetween rounded">
       <div className="flex items-center gap-2">
@@ -47,6 +57,23 @@ const ChatHeader = () => {
             </div>
           </>
         )}
+      </div>
+      <div className="flex items-center gap-4">
+        <MdCall
+          onClick={() => setOpen((prev) => !prev)}
+          className="h-6 w-6 text-white cursor-pointer"
+        />
+        <MdVideoCall
+          onClick={() => setOpen((prev) => !prev)}
+          className="h-6 w-6 text-white cursor-pointer"
+        />
+        <span ref={userModalRef} className="cursor-pointer">
+          <BsThreeDots
+            onClick={() => setOpen((prev) => !prev)}
+            className="h-6 w-6 text-white cursor-pointer"
+          />
+          <UserModal open={open} setOpen={setOpen} isUserOnline={isUserOnline} />
+        </span>
       </div>
       {/* <div>...</div> */}
     </div>

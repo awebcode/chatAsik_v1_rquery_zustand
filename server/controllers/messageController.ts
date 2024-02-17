@@ -17,15 +17,21 @@ export const allMessages = async (
     const limit = parseInt(req.query.limit) || 10;
     const skip = parseInt(req.query.skip) || 0;
     const messages = await Message.find({ chat: req.params.chatId })
+      .populate({
+        path: "isReply.messageId",
+        select: "content",
+        populate: { path: "sender", select: "username pic email" },
+      })
       .populate("sender", "username pic email")
       .populate("chat")
-      .sort({ updatedAt: -1 })
+      .sort({ _id: -1 }) // Use _id for sorting in descending order
       .limit(limit)
       .skip(skip);
 
     const total = await Message.countDocuments({ chat: req.params.chatId });
     res.json({ messages, total, limit });
   } catch (error: any) {
+    console.log({ error });
     next(error);
   }
 };
@@ -41,7 +47,7 @@ export const sendMessage = async (
   const { content, chatId } = req.body;
 
   if (!content || !chatId) {
-    return new CustomErrorHandler("Chat Id or content cannot be empty!", 400);
+    return next(new CustomErrorHandler("Chat Id or content cannot be empty!", 400));
   }
 
   var newMessage = {
@@ -76,14 +82,13 @@ export const updateChatMessageController = async (
 ) => {
   try {
     const { chatId, status } = req.body;
-    console.log({ updateStatus: chatId, status });
     if (!status || !chatId)
-      throw new CustomErrorHandler("Chat Id or status cannot be empty!", 400);
+      return next(new CustomErrorHandler("Chat Id or status cannot be empty!", 400));
 
     const chat = await Chat.findById(chatId)?.populate("latestMessage");
 
     if (!chat || !chat.latestMessage) {
-      throw new CustomErrorHandler("Chat or latest message not found", 404);
+      return next(new CustomErrorHandler("Chat or latest message not found", 404));
     }
 
     const updateMessage = await Message.findByIdAndUpdate(
@@ -115,7 +120,7 @@ export const updateAllMessageStatusSeen = async (
 ) => {
   try {
     if (!req.params.chatId)
-      throw new CustomErrorHandler("Chat Id  cannot be empty!", 400);
+      return next(new CustomErrorHandler("Chat Id  cannot be empty!", 400));
     const lastMessage: any = await Chat.findById(req.params.chatId).populate(
       "latestMessage"
     );
@@ -152,14 +157,14 @@ export const updateChatMessageAsDeliveredController = async (
   try {
     const { userId } = req.params;
     if (!userId) {
-      throw new CustomErrorHandler("User Id cannot be empty!", 400);
+      return next(new CustomErrorHandler("User Id cannot be empty!", 400));
     }
 
     // Find all chats where the user is a participant
     const chats = await Chat.find({ users: { $in: [userId] } }).populate("latestMessage");
 
     if (!chats || chats.length === 0) {
-      throw new CustomErrorHandler("No chats found for the user", 404);
+      return next(new CustomErrorHandler("No chats found for the user", 404));
     }
 
     // Update all messages in each chat
@@ -206,21 +211,32 @@ export const updateMessageStatusAsRemove = async (
   next: NextFunction
 ) => {
   try {
-    const { messageId, status, userId } = req.body;
-    if (!status || !messageId || !userId)
-      return new CustomErrorHandler(
-        "Message Id or status or userId cannot be empty!",
-        400
-      );
-    const updateMessage = await Message.findByIdAndUpdate(
-      messageId,
-      { status, removedBy: userId },
-      { new: true }
-    );
+    const { messageId, status, chatId } = req.body;
+    const prevMessage = await Message.findById({ _id: messageId });
 
-    if (status === "removeFromAll") {
-      await Message.findByIdAndDelete(messageId);
+    if (!status || !messageId || !chatId)
+      return next(new CustomErrorHandler("Message Id or status cannot be empty!", 400));
+
+    const chat = await Chat.findById(chatId)?.populate("latestMessage");
+    if (chat?.latestMessage?._id.toString() === messageId) {
+      return next(new CustomErrorHandler("You cannot remove the latestMessage", 400));
     }
+
+    let updateMessage: any;
+
+    if (status === "remove" || status === "reBack") {
+      updateMessage = await Message.updateOne(
+        { _id: messageId },
+        { $set: { status, removedBy: status === "reBack" ? null : req.id } }
+      );
+    } else if (status === "removeFromAll") {
+      await Message.findByIdAndDelete(messageId);
+      return res.status(200).json({ success: true });
+    }
+
+    // Set the updatedAt field back to its previous value
+    updateMessage.updatedAt = prevMessage?.updatedAt;
+
     res.status(200).json({ success: true, updateMessage });
   } catch (error) {
     next(error);
@@ -235,16 +251,12 @@ export const updateMessageStatusAsUnsent = async (
   next: NextFunction
 ) => {
   try {
-    const { messageId, status, userId } = req.body;
-    if (!status || !messageId || !userId)
-      return new CustomErrorHandler(
-        "Message Id or status or userId cannot be empty!",
-        400
-      );
-    const updateMessage = await Message.findByIdAndUpdate(
-      messageId,
-      { status, removedBy: userId },
-      { new: true }
+    const { messageId, status } = req.body;
+    if (!status || !messageId)
+      return next(new CustomErrorHandler("Message Id or status  cannot be empty!", 400));
+    const updateMessage = await Message.updateOne(
+      { _id: messageId },
+      { $set: { status: "unsent", unsentBy: req.id, content: "unsent" } }
     );
     res.status(200).json({ success: true, updateMessage });
   } catch (error) {
@@ -260,15 +272,74 @@ export const updateChatStatusAsBlockOrUnblock = async (
   next: NextFunction
 ) => {
   try {
-    const { chatId, status, userId } = req.body;
-    if (!status || !chatId || !userId)
-      return new CustomErrorHandler("chat Id or status or userId cannot be empty!", 400);
+    const { chatId, status } = req.body;
+    if (!status || !chatId)
+     return next(new CustomErrorHandler("chat Id or status  cannot be empty!", 400));
     const updatedChat = await Chat.findByIdAndUpdate(
       chatId,
-      { status, blockedBy: userId },
+      { chatStatus: { status, updatedBy: req.id } },
       { new: true }
     );
-    res.status(200).json({ success: true, updatedChat });
+    res.status(200).json({ success: true,status: updatedChat?.chatStatus?.status,updatedBy:req.id });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//reply Message
+
+export const replyMessage = async (
+  req: Request | any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { chatId, messageId, content } = req.body;
+    if (!chatId || !messageId || !content)
+      return next(
+        new CustomErrorHandler("messageId  or chatId or content cannot be empty!", 400)
+      );
+    let message: any = await Message.create({
+      sender: req.id,
+      isReply: { repliedBy: req.id, messageId },
+      content,
+
+      chat: chatId,
+    });
+    message = await message.populate("sender chat", "username pic");
+    // message = await message.populate("chat")
+    message = await User.populate(message, {
+      path: "chat.users",
+      select: "username pic email",
+    });
+
+    await Chat.findByIdAndUpdate(chatId, { latestMessage: message });
+    res.status(200).json({ success: true, message });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//edit message
+
+export const editMessage = async (
+  req: Request | any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { messageId, content } = req.body;
+    if (!messageId || !content)
+      return next(new CustomErrorHandler("messageId  or content cannot be empty!", 400));
+    const editedChat = await Message.findByIdAndUpdate(
+      messageId,
+      {
+        isEdit: { editedBy: req.id },
+        content,
+      },
+      { new: true }
+    );
+    res.status(200).json({ success: true, editedChat });
   } catch (error) {
     next(error);
   }

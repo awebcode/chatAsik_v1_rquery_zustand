@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addToGroup = exports.removeFromGroup = exports.renameGroup = exports.createGroupChat = exports.fetchChats = exports.accessChat = void 0;
+exports.deleteSingleChat = exports.addToGroup = exports.removeFromGroup = exports.renameGroup = exports.createGroupChat = exports.fetchChats = exports.accessChat = void 0;
 const errorHandler_1 = require("../middlewares/errorHandler");
 const ChatModel_1 = require("../model/ChatModel");
 const UserModel_1 = require("../model/UserModel");
@@ -88,6 +88,10 @@ const fetchChats = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             .populate("users", "-password")
             .populate("groupAdmin", "-password")
             .populate("latestMessage")
+            .populate({
+            path: "chatStatus.updatedBy",
+            select: "username pic email",
+        })
             .sort({ updatedAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -282,3 +286,18 @@ const addToGroup = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.addToGroup = addToGroup;
+//delete single chat one to one chat
+const deleteSingleChat = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.params.chatId || !req.id) {
+            return next(new errorHandler_1.CustomErrorHandler("ChatId Not found", 400));
+        }
+        yield MessageModel_1.Message.deleteMany({ chat: req.params.chatId });
+        yield ChatModel_1.Chat.findByIdAndDelete(req.params.chatId);
+        res.json({ success: true });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.deleteSingleChat = deleteSingleChat;

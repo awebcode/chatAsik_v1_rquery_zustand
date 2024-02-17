@@ -28,5 +28,11 @@ messageRoute
     .route("/updateMessageStatusUnsent")
     .put(authMiddleware_1.default, messageController_1.updateMessageStatusAsUnsent);
 //update messesage status as Block/Unblock
-messageRoute.route("/updateChatStatusAsBlockOUnblock").put(authMiddleware_1.default, messageController_1.updateChatStatusAsBlockOrUnblock);
+messageRoute
+    .route("/updateChatStatusAsBlockOUnblock")
+    .put(authMiddleware_1.default, messageController_1.updateChatStatusAsBlockOrUnblock);
+//editMessage
+messageRoute.route("/editMessage").put(authMiddleware_1.default, messageController_1.editMessage);
+//replyMessage
+messageRoute.route("/replyMessage").post(authMiddleware_1.default, messageController_1.replyMessage);
 exports.default = messageRoute;

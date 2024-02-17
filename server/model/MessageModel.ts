@@ -6,7 +6,19 @@ const messageSchema = new mongoose.Schema(
     content: { type: String, trim: true },
     chat: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     removedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+   unsentBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    isReply: {
+      repliedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+    },
+    isEdit: {
+      editedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+    },
     status: {
       type: String,
       enum: [
@@ -15,6 +27,7 @@ const messageSchema = new mongoose.Schema(
         "delivered",
         "remove",
         "removeFromAll",
+        "reBack",
         "unsent",
         "block",
         "unblock",

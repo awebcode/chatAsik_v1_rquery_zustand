@@ -13,4 +13,5 @@ chatRoute.route("/group").post(authMiddleware_1.default, ChatController_1.create
 chatRoute.route("/rename").put(authMiddleware_1.default, ChatController_1.renameGroup);
 chatRoute.route("/removefromgroup").put(authMiddleware_1.default, ChatController_1.removeFromGroup);
 chatRoute.route("/addtogroup").put(authMiddleware_1.default, ChatController_1.addToGroup);
+chatRoute.route("/deleteSingleChat/:chatId").delete(authMiddleware_1.default, ChatController_1.deleteSingleChat);
 exports.default = chatRoute;

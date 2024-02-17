@@ -9,6 +9,10 @@ const chatModel = new mongoose.Schema(
       ref: "Message",
     },
     groupAdmin: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    chatStatus: {
+      status: { type: String, enum: ["blocked", "unblocked", "muted", "archive"] },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    },
   },
   { timestamps: true }
 );

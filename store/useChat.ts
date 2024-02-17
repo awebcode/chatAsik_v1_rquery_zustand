@@ -1,5 +1,6 @@
 // userStore.ts
 
+import { Tuser } from "@/app/(chat)/conponents/UserCard";
 import { create } from "zustand";
 
 
@@ -11,7 +12,10 @@ interface ChatData {
   email?: string;
   userId?: string;
   pic?: string;
-  isGroupChat:boolean
+  isGroupChat: boolean;
+  users?: Tuser[];
+  status?: string;
+  chatUpdatedBy: Tuser;
 }
 
 

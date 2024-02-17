@@ -92,6 +92,10 @@ export const fetchChats = async (
       .populate("users", "-password")
       .populate("groupAdmin", "-password")
       .populate("latestMessage")
+      .populate({
+        path: "chatStatus.updatedBy",
+        select: "username pic email",
+      })
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -318,6 +322,25 @@ export const addToGroup = async (req: Request, res: Response, next: NextFunction
     } else {
       res.json(added);
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+//delete single chat one to one chat
+
+export const deleteSingleChat = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.params.chatId || !(req as any).id) {
+      return next(new CustomErrorHandler("ChatId Not found", 400));
+    }
+    await Message.deleteMany({ chat: req.params.chatId });
+    await Chat.findByIdAndDelete(req.params.chatId);
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }

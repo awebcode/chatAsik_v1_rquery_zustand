@@ -1,6 +1,7 @@
 import express from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import {
+  addRemoveEmojiReactions,
   allMessages,
   editMessage,
   replyMessage,
@@ -50,4 +51,8 @@ messageRoute
 messageRoute.route("/editMessage").put(authMiddleware, editMessage);
 //replyMessage
 messageRoute.route("/replyMessage").post(authMiddleware, replyMessage);
+
+//addRemoveEmojiReactions
+
+messageRoute.post("/addRemoveEmojiReactions", authMiddleware, addRemoveEmojiReactions);
 export default messageRoute;

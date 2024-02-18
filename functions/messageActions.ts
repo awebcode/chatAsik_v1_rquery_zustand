@@ -92,7 +92,6 @@ export const updateChatStatusAsBlockOUnblock = async (userData: any) => {
   return data;
 };
 
-
 //ReplyMessage
 export const replyMessage = async (messageData: any) => {
   const { data } = await axiosClient.post(`/replyMessage`, messageData, {
@@ -102,10 +101,19 @@ export const replyMessage = async (messageData: any) => {
   return data;
 };
 
-
 //editMessage
 export const editMessage = async (messageData: any) => {
   const { data } = await axiosClient.put(`/editMessage`, messageData, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+  return data;
+};
+
+//addRemoveEmojiReactions
+
+export const addRemoveEmojiReactions = async (reactionData: any) => {
+  const { data } = await axiosClient.post(`/addRemoveEmojiReactions`, reactionData, {
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
   });

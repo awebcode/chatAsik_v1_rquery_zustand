@@ -6,6 +6,7 @@ import { Message } from "../model/MessageModel";
 import { User } from "../model/UserModel";
 import { Chat } from "../model/ChatModel";
 import { CustomErrorHandler } from "../middlewares/errorHandler";
+import { Reaction } from "../model/reactModal";
 
 //@access          Protected
 export const allMessages = async (
@@ -16,7 +17,8 @@ export const allMessages = async (
   try {
     const limit = parseInt(req.query.limit) || 10;
     const skip = parseInt(req.query.skip) || 0;
-    const messages = await Message.find({ chat: req.params.chatId })
+
+    let messages = await Message.find({ chat: req.params.chatId })
       .populate({
         path: "isReply.messageId",
         select: "content",
@@ -28,6 +30,22 @@ export const allMessages = async (
       .limit(limit)
       .skip(skip);
 
+    // Populate reactions for each message
+    messages = await Promise.all(
+      messages.map(async (message) => {
+        const reactions = await Reaction.find({ messageId: message._id })
+          .populate({
+            path: "reactBy",
+            select: "username pic email",
+          })
+          .sort({ updatedAt: -1 })
+          .exec();
+
+        return { ...message.toObject(), reactions };
+      })
+    );
+    //find reactions here and pass with every message
+    //@
     const total = await Message.countDocuments({ chat: req.params.chatId });
     res.json({ messages, total, limit });
   } catch (error: any) {
@@ -274,13 +292,17 @@ export const updateChatStatusAsBlockOrUnblock = async (
   try {
     const { chatId, status } = req.body;
     if (!status || !chatId)
-     return next(new CustomErrorHandler("chat Id or status  cannot be empty!", 400));
+      return next(new CustomErrorHandler("chat Id or status  cannot be empty!", 400));
     const updatedChat = await Chat.findByIdAndUpdate(
       chatId,
       { chatStatus: { status, updatedBy: req.id } },
       { new: true }
     );
-    res.status(200).json({ success: true,status: updatedChat?.chatStatus?.status,updatedBy:req.id });
+    res.status(200).json({
+      success: true,
+      status: updatedChat?.chatStatus?.status,
+      updatedBy: req.id,
+    });
   } catch (error) {
     next(error);
   }
@@ -340,6 +362,63 @@ export const editMessage = async (
       { new: true }
     );
     res.status(200).json({ success: true, editedChat });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//addRemoveEmojiReaction
+
+export const addRemoveEmojiReactions = async (
+  req: Request | any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { messageId, emoji, type, reactionId } = req.body;
+
+    switch (type) {
+      case "add": {
+        if (!messageId || !emoji) {
+          return next(new CustomErrorHandler("messageId or emoji cannot be empty!", 400));
+        }
+
+        const existingReaction = await Reaction.findOne({
+          messageId,
+          reactBy: req.id,
+        });
+
+        if (existingReaction) {
+          // Emoji update logic
+          const reaction = await Reaction.findOneAndUpdate(
+            { messageId, reactBy: req.id },
+            { $set: { emoji } },
+            { new: true, upsert: true }
+          );
+          res.status(200).json({ success: true, reaction });
+        } else {
+          // Create a new reaction
+          const reaction = await Reaction.create({
+            messageId,
+            emoji,
+            reactBy: req.id,
+          });
+
+          res.status(200).json({ success: true, reaction });
+        }
+
+        break;
+      }
+      case "remove": {
+        if (!reactionId)
+          return next(new CustomErrorHandler("reactionId cannot be empty!", 400));
+        const reaction = await Reaction.findByIdAndDelete(reactionId);
+        res.status(200).json({ success: true, reaction });
+        break;
+      }
+      default:
+        res.status(400).json({ success: false, message: "Invalid operation type" });
+    }
   } catch (error) {
     next(error);
   }

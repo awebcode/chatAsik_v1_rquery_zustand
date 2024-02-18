@@ -9,7 +9,12 @@ import React, {
   useState,
 } from "react";
 import { toast } from "react-toastify";
-import EmojiPicker, { Theme, EmojiStyle, SuggestionMode } from "emoji-picker-react";
+import EmojiPicker, {
+  Theme,
+  EmojiStyle,
+  SuggestionMode,
+  Categories,
+} from "emoji-picker-react";
 import { useClickAway } from "@uidotdev/usehooks";
 import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
 import { join } from "path";
@@ -51,6 +56,10 @@ const Input = () => {
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setMessage((prev) => ({ ...prev, [name]: value }));
+  };
+  //emoji click
+  const onEmojiClick = (e: Temoji) => {
+    setMessage((prev) => ({ ...prev, message: prev.message + e.emoji }));
   };
   const timerRef = useRef<any | null>(null);
   useEffect(() => {
@@ -218,10 +227,7 @@ const Input = () => {
     replymutation.mutateAsync(messageData as any);
     cancelReply();
   };
-  //emoji click
-  const onEmojiClick = (e: Temoji) => {
-    setMessage((prev) => ({ ...prev, message: prev.message + e.emoji }));
-  };
+
   //side effects and change status
   useEffect(() => {
     if (isEdit) {
@@ -323,6 +329,14 @@ const Input = () => {
                 emojiStyle={EmojiStyle.FACEBOOK}
                 searchPlaceholder="Search chat emojis..."
                 suggestedEmojisMode={SuggestionMode.RECENT}
+                customEmojis={[
+                  {
+                    names: ["Alice", "alice in wonderland"],
+                    imgUrl:
+                      "https://cdn.jsdelivr.net/gh/ealush/emoji-picker-react@custom_emojis_assets/alice.png",
+                    id: "alice",
+                  },
+                ]}
               />
             </div>
           </div>

@@ -35,4 +35,6 @@ messageRoute
 messageRoute.route("/editMessage").put(authMiddleware_1.default, messageController_1.editMessage);
 //replyMessage
 messageRoute.route("/replyMessage").post(authMiddleware_1.default, messageController_1.replyMessage);
+//addRemoveEmojiReactions
+messageRoute.post("/addRemoveEmojiReactions", authMiddleware_1.default, messageController_1.addRemoveEmojiReactions);
 exports.default = messageRoute;

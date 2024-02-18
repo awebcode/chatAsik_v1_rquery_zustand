@@ -6,8 +6,18 @@ const messageSchema = new mongoose.Schema(
     content: { type: String, trim: true },
     chat: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     removedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-   unsentBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    unsentBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // reactions: [
+    //   {
+    //     emoji: String,
+    //     reactBy: {
+    //       type: mongoose.Schema.Types.ObjectId,
+    //       ref: "User",
+    //     },
+    //     messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+    //   },
+    // ],
     isReply: {
       repliedBy: {
         type: mongoose.Schema.Types.ObjectId,

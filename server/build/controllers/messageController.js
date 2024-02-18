@@ -11,17 +11,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.editMessage = exports.replyMessage = exports.updateChatStatusAsBlockOrUnblock = exports.updateMessageStatusAsUnsent = exports.updateMessageStatusAsRemove = exports.updateChatMessageAsDeliveredController = exports.updateAllMessageStatusSeen = exports.updateChatMessageController = exports.sendMessage = exports.allMessages = void 0;
+exports.addRemoveEmojiReactions = exports.editMessage = exports.replyMessage = exports.updateChatStatusAsBlockOrUnblock = exports.updateMessageStatusAsUnsent = exports.updateMessageStatusAsRemove = exports.updateChatMessageAsDeliveredController = exports.updateAllMessageStatusSeen = exports.updateChatMessageController = exports.sendMessage = exports.allMessages = void 0;
 const MessageModel_1 = require("../model/MessageModel");
 const UserModel_1 = require("../model/UserModel");
 const ChatModel_1 = require("../model/ChatModel");
 const errorHandler_1 = require("../middlewares/errorHandler");
+const reactModal_1 = require("../model/reactModal");
 //@access          Protected
 const allMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const limit = parseInt(req.query.limit) || 10;
         const skip = parseInt(req.query.skip) || 0;
-        const messages = yield MessageModel_1.Message.find({ chat: req.params.chatId })
+        let messages = yield MessageModel_1.Message.find({ chat: req.params.chatId })
             .populate({
             path: "isReply.messageId",
             select: "content",
@@ -32,6 +33,19 @@ const allMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             .sort({ _id: -1 }) // Use _id for sorting in descending order
             .limit(limit)
             .skip(skip);
+        // Populate reactions for each message
+        messages = yield Promise.all(messages.map((message) => __awaiter(void 0, void 0, void 0, function* () {
+            const reactions = yield reactModal_1.Reaction.find({ messageId: message._id })
+                .populate({
+                path: "reactBy",
+                select: "username pic email",
+            })
+                .sort({ updatedAt: -1 })
+                .exec();
+            return Object.assign(Object.assign({}, message.toObject()), { reactions });
+        })));
+        //find reactions here and pass with every message
+        //@
         const total = yield MessageModel_1.Message.countDocuments({ chat: req.params.chatId });
         res.json({ messages, total, limit });
     }
@@ -214,7 +228,11 @@ const updateChatStatusAsBlockOrUnblock = (req, res, next) => __awaiter(void 0, v
         if (!status || !chatId)
             return next(new errorHandler_1.CustomErrorHandler("chat Id or status  cannot be empty!", 400));
         const updatedChat = yield ChatModel_1.Chat.findByIdAndUpdate(chatId, { chatStatus: { status, updatedBy: req.id } }, { new: true });
-        res.status(200).json({ success: true, status: (_j = updatedChat === null || updatedChat === void 0 ? void 0 : updatedChat.chatStatus) === null || _j === void 0 ? void 0 : _j.status, updatedBy: req.id });
+        res.status(200).json({
+            success: true,
+            status: (_j = updatedChat === null || updatedChat === void 0 ? void 0 : updatedChat.chatStatus) === null || _j === void 0 ? void 0 : _j.status,
+            updatedBy: req.id,
+        });
     }
     catch (error) {
         next(error);
@@ -264,3 +282,48 @@ const editMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.editMessage = editMessage;
+//addRemoveEmojiReaction
+const addRemoveEmojiReactions = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { messageId, emoji, type, reactionId } = req.body;
+        switch (type) {
+            case "add": {
+                if (!messageId || !emoji) {
+                    return next(new errorHandler_1.CustomErrorHandler("messageId or emoji cannot be empty!", 400));
+                }
+                const existingReaction = yield reactModal_1.Reaction.findOne({
+                    messageId,
+                    reactBy: req.id,
+                });
+                if (existingReaction) {
+                    // Emoji update logic
+                    const reaction = yield reactModal_1.Reaction.findOneAndUpdate({ messageId, reactBy: req.id }, { $set: { emoji } }, { new: true, upsert: true });
+                    res.status(200).json({ success: true, reaction });
+                }
+                else {
+                    // Create a new reaction
+                    const reaction = yield reactModal_1.Reaction.create({
+                        messageId,
+                        emoji,
+                        reactBy: req.id,
+                    });
+                    res.status(200).json({ success: true, reaction });
+                }
+                break;
+            }
+            case "remove": {
+                if (!reactionId)
+                    return next(new errorHandler_1.CustomErrorHandler("reactionId cannot be empty!", 400));
+                const reaction = yield reactModal_1.Reaction.findByIdAndDelete(reactionId);
+                res.status(200).json({ success: true, reaction });
+                break;
+            }
+            default:
+                res.status(400).json({ success: false, message: "Invalid operation type" });
+        }
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.addRemoveEmojiReactions = addRemoveEmojiReactions;

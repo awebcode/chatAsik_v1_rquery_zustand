@@ -12,6 +12,16 @@ const messageSchema = new mongoose_1.default.Schema({
     removedBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
     unsentBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
     blockedBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
+    // reactions: [
+    //   {
+    //     emoji: String,
+    //     reactBy: {
+    //       type: mongoose.Schema.Types.ObjectId,
+    //       ref: "User",
+    //     },
+    //     messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+    //   },
+    // ],
     isReply: {
         repliedBy: {
             type: mongoose_1.default.Schema.Types.ObjectId,

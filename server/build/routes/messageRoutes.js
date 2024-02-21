@@ -6,9 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const authMiddleware_1 = __importDefault(require("../middlewares/authMiddleware"));
 const messageController_1 = require("../controllers/messageController");
+const uploadMiddleware_1 = __importDefault(require("../middlewares/uploadMiddleware"));
 const messageRoute = express_1.default.Router();
 messageRoute.route("/allmessages/:chatId").get(authMiddleware_1.default, messageController_1.allMessages);
-messageRoute.route("/sentmessage").post(authMiddleware_1.default, messageController_1.sendMessage);
+messageRoute
+    .route("/sentmessage")
+    .post(authMiddleware_1.default, uploadMiddleware_1.default.single("image"), messageController_1.sendMessage);
 messageRoute
     .route("/updateMessageStatus")
     .patch(authMiddleware_1.default, messageController_1.updateChatMessageController);
@@ -32,9 +35,13 @@ messageRoute
     .route("/updateChatStatusAsBlockOUnblock")
     .put(authMiddleware_1.default, messageController_1.updateChatStatusAsBlockOrUnblock);
 //editMessage
-messageRoute.route("/editMessage").put(authMiddleware_1.default, messageController_1.editMessage);
+messageRoute
+    .route("/editMessage")
+    .put(authMiddleware_1.default, uploadMiddleware_1.default.single("image"), messageController_1.editMessage);
 //replyMessage
-messageRoute.route("/replyMessage").post(authMiddleware_1.default, messageController_1.replyMessage);
+messageRoute
+    .route("/replyMessage")
+    .post(authMiddleware_1.default, uploadMiddleware_1.default.single("image"), messageController_1.replyMessage);
 //addRemoveEmojiReactions
 messageRoute.post("/addRemoveEmojiReactions", authMiddleware_1.default, messageController_1.addRemoveEmojiReactions);
 exports.default = messageRoute;

@@ -36,6 +36,9 @@ import { IoMdClose, IoMdPhotos } from "react-icons/io";
 import { MdAddAPhoto, MdOutlineKeyboardVoice, MdVoiceChat } from "react-icons/md";
 import { RiEmojiStickerLine } from "react-icons/ri";
 import ChatStatus from "./ChatStatus";
+import AudioVoice from "./audioVoice/Voice";
+import ImageMessage from "./imageMess/ImageMessage";
+import { LuSendHorizonal } from "react-icons/lu";
 type Tmessage = {
   message: string | any;
 };
@@ -48,10 +51,13 @@ const Input = () => {
   const { currentUser } = useUserStore();
   const [message, setMessage] = useState<Tmessage>({ message: "" });
   const [openEmoji, setOpenEmoji] = useState(false);
+  const [openImageModal, setOpenImageModal] = useState(false);
   const { isTyping, content: typingContent, chatId: typingChatId } = useTypingStore();
-  const { cancelEdit, cancelReply, isEdit, isReply } = useEditReplyStore();
+  const { cancelEdit, cancelReply, isEdit, isReply, isSentImageModalOpen } =
+    useEditReplyStore();
   //clickOutside
   const clickRef: any = useClickAway(() => setOpenEmoji(false));
+  const clickImageModalRef: any = useClickAway(() => setOpenImageModal(false));
   //change message
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -113,8 +119,12 @@ const Input = () => {
   }, [message.message, currentUser, selectedChat, socket]);
 
   const onkeydown = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !isEdit && !isReply) {
       onSubmit();
+    } else if (e.key === "Enter" && isEdit) {
+      onEditSubmit();
+    } else if (e.key === "Enter" && isReply) {
+      onReplySubmit();
     }
   };
   //onsubmit
@@ -161,7 +171,7 @@ const Input = () => {
       socket.emit("sentMessage", socketData);
       toast.success("Message Replied!");
       setMessage({ message: "" });
-
+      setOpenImageModal(false);
       queryclient.invalidateQueries({
         queryKey: ["messages"],
       });
@@ -185,7 +195,7 @@ const Input = () => {
       socket.emit("sentMessage", socketData);
       toast.success("Message Edited!");
       setMessage({ message: "" });
-
+      setOpenImageModal(false);
       queryclient.invalidateQueries({
         queryKey: ["messages"],
       });
@@ -230,14 +240,19 @@ const Input = () => {
 
   //side effects and change status
   useEffect(() => {
-    if (isEdit) {
+    if (isEdit && isEdit.content) {
       setMessage({ message: isEdit.content });
     }
   }, [isEdit]);
 
+  //audioVoice
+  const audioCallback = (data: any) => {
+    console.log({ audioCallbackData: data });
+  };
   if (selectedChat?.status === "blocked") {
     return <ChatStatus user={selectedChat.chatUpdatedBy} />;
   }
+
   return (
     <>
       {isTyping && typingContent && typingChatId === selectedChat?.chatId && (
@@ -282,14 +297,28 @@ const Input = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-center w-full">
-          <span className="p-2">
-            <button className="rounded-md" onClick={() => setOpenEmoji((prev) => !prev)}>
-              <MdOutlineKeyboardVoice className="text-blue-400 h-8 w-8 mx-1" />
+        <div className="flex items-center justify-center w-full p-4 ">
+          <span className="p-2 flex items-center">
+            <button className="rounded-md mt-2">
+              <AudioVoice callback={audioCallback} />
+              {/* <MdOutlineKeyboardVoice className="text-blue-400 h-8 w-8 mx-1" /> */}
             </button>
-            <button className="rounded-md" onClick={() => setOpenEmoji((prev) => !prev)}>
-              <MdAddAPhoto className="text-blue-400 h-8 w-8 mx-1" />
-            </button>
+            <div ref={clickImageModalRef} className="relative">
+              <button
+                className="rounded-md"
+                onClick={() => setOpenImageModal((prev) => !prev)}
+              >
+                <MdAddAPhoto className="text-blue-400 h-8 w-8 mx-1" />
+              </button>
+              {openImageModal && (
+                <ImageMessage
+                  mutation={mutation}
+                  replymutation={replymutation}
+                  editmutation={editmutation}
+                  setOpenImageModal={setOpenImageModal}
+                />
+              )}
+            </div>
             <button className="rounded-md" onClick={() => setOpenEmoji((prev) => !prev)}>
               <IoMdPhotos className="text-blue-400 h-8 w-8 " />
             </button>
@@ -340,18 +369,22 @@ const Input = () => {
               />
             </div>
           </div>
-          <button
-            onClick={isEdit ? onEditSubmit : isReply ? onReplySubmit : onSubmit}
-            className="h-auto text-xl md:text-2xl mx-2"
-          >
-            {isEdit ? (
-              <span className="btn capitalize text-xs h-full">Edit</span>
-            ) : isReply ? (
-              <span className="btn capitalize text-xs h-full">Reply</span>
-            ) : (
-              "😍"
-            )}
-          </button>
+          {!isSentImageModalOpen && (
+            <button
+              onClick={isEdit ? onEditSubmit : isReply ? onReplySubmit : onSubmit}
+              className="h-auto text-xl md:text-2xl mx-2"
+            >
+              {isEdit ? (
+                <span className="btn capitalize text-xs h-full">Edit</span>
+              ) : isReply ? (
+                <span className="btn capitalize text-xs h-full">Reply</span>
+              ) : message.message ? (
+                <LuSendHorizonal className="text-blue-500 h-9 w-9" />
+              ) : (
+                "😍"
+              )}
+            </button>
+          )}
         </div>
       </div>
     </>

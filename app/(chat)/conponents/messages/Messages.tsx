@@ -15,7 +15,7 @@ import NoChatProfile from "../NoChatProfile";
 const Messages = () => {
   const { currentUser } = useUserStore();
 
-  const { selectedChat } = useChatStore()
+  const { selectedChat } = useChatStore();
   const { data, fetchNextPage, hasNextPage, isFetching, isLoading } = useInfiniteQuery({
     queryKey: ["messages", selectedChat?.chatId],
 
@@ -102,6 +102,7 @@ const Messages = () => {
       //fetchHere when scrolling up
     }
   };
+ 
 
   return (
     <>
@@ -116,7 +117,9 @@ const Messages = () => {
           className="menu p-4 bg-base-200 h-[80vh] overflow-y-scroll overflow-x-hidden flex flex-col-reverse"
         >
           <div className="init_profile">
-            {messages.length === 0 && <NoChatProfile user={selectedChat as any} />}{" "}
+            {messages.length === 0 && !isLoading && (
+              <NoChatProfile user={selectedChat as any} />
+            )}{" "}
           </div>
           <InfiniteScroll
             dataLength={messages ? messages?.length : 0}
@@ -143,11 +146,15 @@ const Messages = () => {
             scrollThreshold={1}
           >
             <div className="flex flex-col gap-5">
-              {messages &&
+              {isLoading ? (
+                <div className="m-8 mb-30 h-10 w-10 block mx-auto animate-spin rounded-full border-4 border-blue-500  border-r-transparent  align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+              ) : (
+                messages &&
                 messages.length &&
                 messages.reverse().map((message: any, i: any) => {
                   return <MessageCard message={message} key={message?._id} />;
-                })}
+                })
+              )}
               <div ref={messageEndRef} />
             </div>
 

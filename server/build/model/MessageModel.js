@@ -8,6 +8,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const messageSchema = new mongoose_1.default.Schema({
     sender: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
     content: { type: String, trim: true },
+    image: { public_Id: String, url: String },
     chat: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Chat" },
     removedBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },
     unsentBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" },

@@ -15,15 +15,13 @@ import {
   updateAllMessageStatusAsUnsent,
 } from "@/functions/messageActions";
 import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
-import { MdAdd, MdClose, MdOutlineEmojiEmotions } from "react-icons/md";
-import EmojiPicker, {
-  Theme,
-  EmojiStyle,
-  SuggestionMode,
-  Categories,
-} from "emoji-picker-react";
+import { MdOutlineEmojiEmotions } from "react-icons/md";
+
 import { useAddRemoveReactionMutation } from "../mutations/messageMutations";
 import { useOnlineUsersStore } from "@/store/useOnlineUsers";
+
+import Reactions from "./Reactions";
+import EmojiReactModal from "./EmojiReactModal";
 type TMessage = {
   _id: string;
   content: string;
@@ -35,10 +33,10 @@ type TMessage = {
   updatedAt: Date;
   removedBy: string;
   reactions: any[];
+  image: { url: string };
 };
 
 const MessageCard = ({ message }: { message: TMessage }) => {
-  const { onlineUsers } = useOnlineUsersStore();
   const { onEdit, onReply } = useEditReplyStore();
   const { currentUser } = useUserStore();
   const { selectedChat } = useChatStore();
@@ -117,7 +115,7 @@ const MessageCard = ({ message }: { message: TMessage }) => {
     removemutation.mutateAsync(data as any);
   };
   const unsentHandler = (id: string) => {
-    const data = { status: "unsent", messageId: id };
+    const data = { status: "unsent", messageId: id, chatId: selectedChat?.chatId };
     unsentmutation.mutateAsync(data as any);
   };
 
@@ -131,9 +129,19 @@ const MessageCard = ({ message }: { message: TMessage }) => {
   };
   useEffect(() => {
     if (removemutation.isError && removemutation.error) {
-      toast.warning((removemutation.error as any)?.response.data.message);
+      toast.error((removemutation.error as any)?.response?.data?.message);
     }
-  }, [removemutation.isError]);
+
+    if (unsentmutation.isError && unsentmutation.error) {
+      toast.error((unsentmutation.error as any)?.response?.data?.message);
+    }
+
+    return () => {
+      // Cleanup: Reset error states when the component unmounts
+      removemutation.reset();
+      unsentmutation.reset();
+    };
+  }, [removemutation.isError, unsentmutation.isError, toast]);
   //reactiions
   const addRemoveReactionMutation = useAddRemoveReactionMutation();
   const onEmojiClick = (e: any, messageId: string) => {
@@ -153,8 +161,6 @@ const MessageCard = ({ message }: { message: TMessage }) => {
     };
     addRemoveReactionMutation.mutateAsync(reactionData);
   };
-  const lastThreeReactions =
-    message?.reactions?.slice(0, 3).map((reaction) => reaction.emoji) ?? [];
 
   return (
     <div
@@ -272,73 +278,18 @@ const MessageCard = ({ message }: { message: TMessage }) => {
                         className={`text-gray-300 h-[18px] w-[18px] mr-1 cursor-pointer`}
                       />
                     </span>
-                    <div
-                      className={`absolute -top-[90px] -right-20 p-4 rounded-xl bg-gray-800  max-w-[40rem] transition-all  duration-500  ${
-                        openReactModal ? "block opacity-100" : "hidden opacity-0"
-                      }`}
-                    >
-                      <div className="flexBetween flex-row w-full gap-x-2">
-                        {["🙂", "😍", "❤", "😠", "😜"].map((v, i: number) => {
-                          return (
-                            <>
-                              {" "}
-                              <span
-                                onClick={() => {
-                                  const e = { emoji: v };
-                                  onEmojiClick(e, message._id);
-                                  // setOpenReactModal(false);
-                                  // setOpenEmojiModal(false);
-                                }}
-                                key={i}
-                                className={`text-gray-300 h-6 w-6 mr-1 cursor-pointer transition-all duration-500 hover:scale-105`}
-                              >
-                                {" "}
-                                {v}
-                              </span>
-                            </>
-                          );
-                        })}
-                        <span
-                          ref={emojiModalRef}
-                          className="p-2 rounded-full bg-gray-700"
-                        >
-                          <MdAdd
-                            onClick={() => setOpenEmojiModal((prev: boolean) => !prev)}
-                            className={`text-gray-300 h-[18px] w-[18px] mr-1 cursor-pointer `}
-                          />
-                          <EmojiPicker
-                            open={openEmojiModal}
-                            style={{
-                              position: "absolute",
-                              top: !isCurrentUserMessage ? "" : "0px", // Adjust this value based on your design
-                              right: !isCurrentUserMessage ? "-220px" : "0px",
-                              zIndex: 1000,
-                            }}
-                            height={360}
-                            width={310}
-                            onEmojiClick={(e) => {
-                              onEmojiClick(e, message._id);
-                              setOpenReactModal(false);
-                              setOpenEmojiModal(false);
-                            }}
-                            autoFocusSearch
-                            theme={Theme.DARK}
-                            lazyLoadEmojis
-                            emojiStyle={EmojiStyle.FACEBOOK}
-                            searchPlaceholder="Search chat emojis..."
-                            suggestedEmojisMode={SuggestionMode.RECENT}
-                            customEmojis={[
-                              {
-                                names: ["Alice", "alice in wonderland"],
-                                imgUrl:
-                                  "https://cdn.jsdelivr.net/gh/ealush/emoji-picker-react@custom_emojis_assets/alice.png",
-                                id: "alice",
-                              },
-                            ]}
-                          />
-                        </span>
-                      </div>
-                    </div>
+                    {/* Emoji Modal */}
+
+                    <EmojiReactModal
+                      message={message}
+                      openReactModal={openReactModal}
+                      setOpenReactModal={setOpenReactModal}
+                      onEmojiClick={onEmojiClick}
+                      emojiModalRef={emojiModalRef}
+                      openEmojiModal={openEmojiModal}
+                      setOpenEmojiModal={setOpenEmojiModal}
+                      isCurrentUserMessage={isCurrentUserMessage}
+                    />
                   </div>
                   {/* Emoji reaction end */}
                 </>
@@ -383,12 +334,54 @@ const MessageCard = ({ message }: { message: TMessage }) => {
                   </span>
                   <div className="relative text-sm  bg-gray-800  rounded-lg p-3  max-w-[260px] break-words !h-fit  ">
                     <span className="text-gray-300">
-                      {message.isReply?.messageId?.content}
+                      {/* {message.isReply?.messageId?.content} */}
+                      {message.isReply?.messageId?.content ? (
+                        message.isReply?.messageId?.content
+                      ) : message.isReply?.messageId?.image ? (
+                        <div className="h-[130px] w-[130px] rounded">
+                          <Image
+                            src={message.isReply?.messageId?.image.url}
+                            alt={message.sender.username}
+                            height={100}
+                            width={100}
+                            className="h-full w-full rounded-lg"
+                          />
+                        </div>
+                      ) : (
+                        ""
+                      )}
                     </span>
                     {message.status !== "remove" &&
                     message.removedBy !== currentUser?._id ? (
-                      <div className="absolute -bottom-7 ring-2 ring-gray-400 left-8 right-0 text-sm text-gray-200  bg-gray-800 rounded-lg p-2  max-w-[260px] break-words !h-fit  ">
-                        {message.content}
+                      <div
+                        className={`absolute ${
+                          message.image ? "-bottom-[70px]" : "-bottom-5"
+                        } ring-2 ring-gray-400 left-8 right-0 text-sm text-gray-200  bg-gray-800 rounded-lg p-2  max-w-[260px] break-words !h-fit  `}
+                      >
+                        {message.content ? (
+                          message.content
+                        ) : message.image ? (
+                          <div className="h-[60px]  rounded">
+                            <Image
+                              src={message.image.url}
+                              alt={message.sender.username}
+                              height={80}
+                              width={80}
+                              className="h-full w-full rounded-lg object-cover"
+                            />
+                          </div>
+                        ) : (
+                          ""
+                        )}
+                        {/* Reply Reactions */}
+                        <Reactions
+                          message={message}
+                          isCurrentUserMessage={isCurrentUserMessage}
+                          handleRemoveReact={handleRemoveReact}
+                          isReactionListModal={isReactionListModal}
+                          setReactionListVisible={setReactionListVisible}
+                          reactionListModalRef={reactionListModalRef}
+                        />
                       </div>
                     ) : (
                       <div className="absolute -bottom-7 ring-2 ring-gray-400 left-8 right-0 text-sm text-gray-200  bg-gray-800 rounded-lg p-2  max-w-[260px] break-words !h-fit  ">
@@ -400,117 +393,32 @@ const MessageCard = ({ message }: { message: TMessage }) => {
               ) : message.status !== "remove" &&
                 message.removedBy !== currentUser?._id ? (
                 <div className="text-sm relative  text-gray-200  bg-gray-800 rounded-lg p-3  max-w-[260px] break-words !h-fit  ">
-                  {message.content}
-                  {/* Reactions */}
-                  <div ref={reactionListModalRef}>
-                    {message.reactions?.length === 1 ? (
-                      <span
-                        onClick={() => setReactionListVisible(!isReactionListModal)}
-                        className="absolute -bottom-3 right-[6px] text-xl cursor-pointer"
-                      >
-                        <span className="flex">{message.reactions[0].emoji}</span>
-                      </span>
-                    ) : (
-                      <span
-                        onClick={() => setReactionListVisible(!isReactionListModal)}
-                        className="absolute -bottom-3 right-[6px] text-[14px] cursor-pointer"
-                      >
-                        {lastThreeReactions.reverse().map((v, i) => (
-                          <span key={i} className="inline">
-                            {v}
-                          </span>
-                        ))}
-                        <span className="text-xs">
-                          {" "}
-                          {message.reactions?.length > 1 && message.reactions?.length < 3
-                            ? `` //${message.reactions.length}
-                            : message.reactions?.length > 3
-                            ? ` +${message.reactions.length - 3}`
-                            : ""}
-                        </span>
-                      </span>
-                    )}
-                    <div
-                      className={`z-50 absolute -top-20 ${
-                        !isCurrentUserMessage ? "-right-[290px] w-[400px]" : "right-10"
-                      } rounded transition-all  bg-gray-900 p-8 duration-300 ${
-                        isReactionListModal
-                          ? "block w-[400px] max-h-[300px] overflow-y-auto"
-                          : "hidden"
-                      }`}
-                    >
-                      <button
-                        onClick={() => setReactionListVisible(false)}
-                        className="btn float-right "
-                      >
-                        <MdClose />
-                      </button>
-                      <h1 className="text-3xl p-3 border-b-2 mb-6 border-violet-600">
-                        Reactions ({message.reactions?.length})
-                      </h1>
-                      <div className="">
-                        {message.reactions.map((v, i) => {
-                          return (
-                            <div className="flexBetween gap-2 hover:bg-gray-700 duration-300 p-3 rounded-md">
-                              <div className="left p-2 flex">
-                                {" "}
-                                <div className="h-8 w-8 relative rounded-full ring-2 ring-violet-600">
-                                  <Image
-                                    height={35}
-                                    width={35}
-                                    className="rounded-full h-full w-full object-cover"
-                                    alt={v.reactBy.username as any}
-                                    src={v.reactBy.pic as any}
-                                  />
-                                  {onlineUsers.some(
-                                    (u: any) => u.id === v.reactBy._id
-                                  ) ? (
-                                    <span
-                                      className={`absolute bottom-0 right-0 rounded-full p-[6px] 
-                                        bg-green-500
-                                      `}
-                                    ></span>
-                                  ) : (
-                                    <span
-                                      className={`absolute bottom-0 right-0 rounded-full p-[6px] 
-                                       bg-rose-500
-                                      `}
-                                    ></span>
-                                  )}
-                                </div>
-                                <div className="flex flex-col mx-4">
-                                  <span>{v.reactBy.username}</span>
-                                  {/* Remove own react */}
-                                  {v.reactBy._id === currentUser?._id && (
-                                    <span
-                                      className="text-rose-300 cursor-pointer my-1"
-                                      onClick={() => {
-                                        handleRemoveReact(v._id);
-                                        setReactionListVisible(false);
-                                      }}
-                                    >
-                                      Click to remove
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Right side */}
-
-                              <div className="emoji  text-yellow-400">
-                                <span className="text-2xl">{v.emoji}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <button
-                        onClick={() => setReactionListVisible(false)}
-                        className="btn float-right bottom-0 "
-                      >
-                        Close
-                      </button>
+                  {message.content ? (
+                    message.content
+                  ) : message.image ? (
+                    <div className="h-[130px] w-[130px] rounded">
+                      <Image
+                        src={message.image.url}
+                        alt={message.sender.username}
+                        height={100}
+                        width={100}
+                        className="h-full w-full rounded-lg"
+                      />
                     </div>
-                  </div>
+                  ) : (
+                    ""
+                  )}
+
+                  {/* Reactions */}
+
+                  <Reactions
+                    message={message}
+                    isCurrentUserMessage={isCurrentUserMessage}
+                    handleRemoveReact={handleRemoveReact}
+                    isReactionListModal={isReactionListModal}
+                    setReactionListVisible={setReactionListVisible}
+                    reactionListModalRef={reactionListModalRef}
+                  />
                   {/*Display Reactions end */}
                 </div>
               ) : (

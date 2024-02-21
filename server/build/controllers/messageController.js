@@ -10,6 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRemoveEmojiReactions = exports.editMessage = exports.replyMessage = exports.updateChatStatusAsBlockOrUnblock = exports.updateMessageStatusAsUnsent = exports.updateMessageStatusAsRemove = exports.updateChatMessageAsDeliveredController = exports.updateAllMessageStatusSeen = exports.updateChatMessageController = exports.sendMessage = exports.allMessages = void 0;
 const MessageModel_1 = require("../model/MessageModel");
@@ -17,6 +20,8 @@ const UserModel_1 = require("../model/UserModel");
 const ChatModel_1 = require("../model/ChatModel");
 const errorHandler_1 = require("../middlewares/errorHandler");
 const reactModal_1 = require("../model/reactModal");
+const cloudinary_1 = require("cloudinary");
+const fs_1 = __importDefault(require("fs"));
 //@access          Protected
 const allMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -25,7 +30,7 @@ const allMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         let messages = yield MessageModel_1.Message.find({ chat: req.params.chatId })
             .populate({
             path: "isReply.messageId",
-            select: "content",
+            select: "content image",
             populate: { path: "sender", select: "username pic email" },
         })
             .populate("sender", "username pic email")
@@ -59,9 +64,9 @@ exports.allMessages = allMessages;
 //@route           POST /api/Message/
 //@access          Protected
 const sendMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { content, chatId } = req.body;
-    if (!content || !chatId) {
-        return next(new errorHandler_1.CustomErrorHandler("Chat Id or content cannot be empty!", 400));
+    const { content, chatId, type } = req.body;
+    if (!chatId) {
+        return next(new errorHandler_1.CustomErrorHandler("Chat Id cannot be empty!", 400));
     }
     var newMessage = {
         sender: req.id,
@@ -69,7 +74,29 @@ const sendMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         chat: chatId,
     };
     try {
-        var message = yield MessageModel_1.Message.create(newMessage);
+        var message;
+        if (type === "image") {
+            const url = yield cloudinary_1.v2.uploader.upload(req.file.path);
+            const localFilePath = req.file.path;
+            fs_1.default.unlink(localFilePath, (err) => {
+                if (err) {
+                    console.error(`Error deleting local file: ${err.message}`);
+                }
+                else {
+                    console.log(`Local file deleted: ${localFilePath}`);
+                }
+            });
+            var newImageMessage = {
+                sender: req.id,
+                image: { public_Id: url.public_id, url: url.url },
+                chat: chatId,
+            };
+            message = yield MessageModel_1.Message.create(newImageMessage);
+            console.log({ message });
+        }
+        else {
+            message = yield MessageModel_1.Message.create(newMessage);
+        }
         message = yield message.populate("sender chat", "username pic");
         // message = await message.populate("chat")
         message = yield UserModel_1.User.populate(message, {
@@ -208,10 +235,15 @@ const updateMessageStatusAsRemove = (req, res, next) => __awaiter(void 0, void 0
 exports.updateMessageStatusAsRemove = updateMessageStatusAsRemove;
 //update message status as unsent
 const updateMessageStatusAsUnsent = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _j, _k;
     try {
-        const { messageId, status } = req.body;
+        const { messageId, status, chatId } = req.body;
         if (!status || !messageId)
             return next(new errorHandler_1.CustomErrorHandler("Message Id or status  cannot be empty!", 400));
+        const chat = yield ((_j = ChatModel_1.Chat.findById(chatId)) === null || _j === void 0 ? void 0 : _j.populate("latestMessage"));
+        if (((_k = chat === null || chat === void 0 ? void 0 : chat.latestMessage) === null || _k === void 0 ? void 0 : _k._id.toString()) === messageId) {
+            return next(new errorHandler_1.CustomErrorHandler("You cannot remove the latestMessage", 400));
+        }
         const updateMessage = yield MessageModel_1.Message.updateOne({ _id: messageId }, { $set: { status: "unsent", unsentBy: req.id, content: "unsent" } });
         res.status(200).json({ success: true, updateMessage });
     }
@@ -222,7 +254,7 @@ const updateMessageStatusAsUnsent = (req, res, next) => __awaiter(void 0, void 0
 exports.updateMessageStatusAsUnsent = updateMessageStatusAsUnsent;
 //update Chat status as Blocked/Unblocked
 const updateChatStatusAsBlockOrUnblock = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _j;
+    var _l;
     try {
         const { chatId, status } = req.body;
         if (!status || !chatId)
@@ -230,7 +262,7 @@ const updateChatStatusAsBlockOrUnblock = (req, res, next) => __awaiter(void 0, v
         const updatedChat = yield ChatModel_1.Chat.findByIdAndUpdate(chatId, { chatStatus: { status, updatedBy: req.id } }, { new: true });
         res.status(200).json({
             success: true,
-            status: (_j = updatedChat === null || updatedChat === void 0 ? void 0 : updatedChat.chatStatus) === null || _j === void 0 ? void 0 : _j.status,
+            status: (_l = updatedChat === null || updatedChat === void 0 ? void 0 : updatedChat.chatStatus) === null || _l === void 0 ? void 0 : _l.status,
             updatedBy: req.id,
         });
     }
@@ -242,15 +274,40 @@ exports.updateChatStatusAsBlockOrUnblock = updateChatStatusAsBlockOrUnblock;
 //reply Message
 const replyMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { chatId, messageId, content } = req.body;
-        if (!chatId || !messageId || !content)
-            return next(new errorHandler_1.CustomErrorHandler("messageId  or chatId or content cannot be empty!", 400));
-        let message = yield MessageModel_1.Message.create({
-            sender: req.id,
-            isReply: { repliedBy: req.id, messageId },
-            content,
-            chat: chatId,
-        });
+        const { chatId, messageId, content, type } = req.body;
+        if (!chatId || !messageId) {
+            return next(new errorHandler_1.CustomErrorHandler("messageId  or chatId cannot be empty!", 400));
+        }
+        let message;
+        if (type === "image") {
+            if (!req.file.path) {
+                return next(new errorHandler_1.CustomErrorHandler("Image  cannot be empty!", 400));
+            }
+            const url = yield cloudinary_1.v2.uploader.upload(req.file.path);
+            const localFilePath = req.file.path;
+            fs_1.default.unlink(localFilePath, (err) => {
+                if (err) {
+                    console.error(`Error deleting local file: ${err.message}`);
+                }
+                else {
+                    console.log(`Local file deleted: ${localFilePath}`);
+                }
+            });
+            message = yield MessageModel_1.Message.create({
+                sender: req.id,
+                isReply: { repliedBy: req.id, messageId },
+                image: { public_Id: url.public_id, url: url.url },
+                chat: chatId,
+            });
+        }
+        else {
+            message = yield MessageModel_1.Message.create({
+                sender: req.id,
+                isReply: { repliedBy: req.id, messageId },
+                content,
+                chat: chatId,
+            });
+        }
         message = yield message.populate("sender chat", "username pic");
         // message = await message.populate("chat")
         message = yield UserModel_1.User.populate(message, {
@@ -267,14 +324,44 @@ const replyMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
 exports.replyMessage = replyMessage;
 //edit message
 const editMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _m, _o;
     try {
-        const { messageId, content } = req.body;
-        if (!messageId || !content)
-            return next(new errorHandler_1.CustomErrorHandler("messageId  or content cannot be empty!", 400));
-        const editedChat = yield MessageModel_1.Message.findByIdAndUpdate(messageId, {
-            isEdit: { editedBy: req.id },
-            content,
-        }, { new: true });
+        const { messageId, content, type } = req.body;
+        if (!messageId)
+            return next(new errorHandler_1.CustomErrorHandler("messageId  cannot be empty!", 400));
+        const prevMessage = yield MessageModel_1.Message.findById(messageId);
+        //delete Previous Image
+        if ((_m = prevMessage.image) === null || _m === void 0 ? void 0 : _m.public_Id) {
+            yield cloudinary_1.v2.uploader.destroy((_o = prevMessage.image) === null || _o === void 0 ? void 0 : _o.public_Id);
+        }
+        let editedChat;
+        if (type === "image") {
+            if (!messageId || !req.file.path) {
+                return next(new errorHandler_1.CustomErrorHandler("messageId or file cannot be empty!", 400));
+            }
+            const url = yield cloudinary_1.v2.uploader.upload(req.file.path);
+            const localFilePath = req.file.path;
+            fs_1.default.unlink(localFilePath, (err) => {
+                if (err) {
+                    console.error(`Error deleting local file: ${err.message}`);
+                }
+                else {
+                    console.log(`Local file deleted: ${localFilePath}`);
+                }
+            });
+            editedChat = yield MessageModel_1.Message.findByIdAndUpdate(messageId, {
+                isEdit: { editedBy: req.id },
+                image: { public_Id: url.public_id, url: url.url },
+            }, { new: true });
+        }
+        else {
+            if (!messageId || !content)
+                return next(new errorHandler_1.CustomErrorHandler("messageId or content  cannot be empty!", 400));
+            editedChat = yield MessageModel_1.Message.findByIdAndUpdate(messageId, {
+                isEdit: { editedBy: req.id },
+                content,
+            }, { new: true });
+        }
         res.status(200).json({ success: true, editedChat });
     }
     catch (error) {

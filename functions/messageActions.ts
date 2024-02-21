@@ -27,7 +27,7 @@ export const allMessages = async ({
 //sent message
 export const sentMessage = async (body: any) => {
   const { data } = await axiosClient.post(`/sentMessage`, body, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "multipart/form-data" },
     withCredentials: true,
   });
   return data;
@@ -95,7 +95,7 @@ export const updateChatStatusAsBlockOUnblock = async (userData: any) => {
 //ReplyMessage
 export const replyMessage = async (messageData: any) => {
   const { data } = await axiosClient.post(`/replyMessage`, messageData, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "multipart/form-data" },
     withCredentials: true,
   });
   return data;
@@ -104,7 +104,7 @@ export const replyMessage = async (messageData: any) => {
 //editMessage
 export const editMessage = async (messageData: any) => {
   const { data } = await axiosClient.put(`/editMessage`, messageData, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "multipart/form-data" },
     withCredentials: true,
   });
   return data;

@@ -21,6 +21,7 @@ type TUser = {
 type TEditStore = {
   isEdit: TMessage | null;
   isReply: TMessage | null;
+  isSentImageModalOpen:  boolean;
   onEdit: (message: TMessage) => void;
   onReply: (message: TMessage) => void;
   cancelReply: () => void;
@@ -30,6 +31,7 @@ type TEditStore = {
 const useEditReplyStore = create<TEditStore>((set) => ({
   isEdit: null,
   isReply: null,
+  isSentImageModalOpen: false, // Corrected initialization
   onEdit: (message: TMessage) => set({ isEdit: message, isReply: null }),
   onReply: (message: TMessage) => set({ isReply: message, isEdit: null }),
   cancelEdit: () => set({ isEdit: null }),

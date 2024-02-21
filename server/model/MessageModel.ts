@@ -4,6 +4,7 @@ const messageSchema = new mongoose.Schema(
   {
     sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     content: { type: String, trim: true },
+    image: { public_Id: String, url: String },
     chat: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     removedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     unsentBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

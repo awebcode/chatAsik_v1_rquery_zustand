@@ -154,6 +154,10 @@ const FriendsCard: React.FC<{
                 ) : (
                   chat?.latestMessage?.content?.substring(0, 15)
                 )
+              ) : chat?.latestMessage?.image ? (
+                <span>
+                  {getSenderFull(currentUser, chat.users).username + " sent a image"}
+                </span>
               ) : (
                 <span className="text-[10px] font-bold block">
                   Start new conversation

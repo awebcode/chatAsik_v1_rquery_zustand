@@ -7,7 +7,8 @@ import { User } from "../model/UserModel";
 import { Chat } from "../model/ChatModel";
 import { CustomErrorHandler } from "../middlewares/errorHandler";
 import { Reaction } from "../model/reactModal";
-
+import { v2 } from "cloudinary";
+import fs from "fs";
 //@access          Protected
 export const allMessages = async (
   req: Request | any,
@@ -21,7 +22,7 @@ export const allMessages = async (
     let messages = await Message.find({ chat: req.params.chatId })
       .populate({
         path: "isReply.messageId",
-        select: "content",
+        select: "content image",
         populate: { path: "sender", select: "username pic email" },
       })
       .populate("sender", "username pic email")
@@ -62,10 +63,10 @@ export const sendMessage = async (
   res: Response,
   next: NextFunction
 ) => {
-  const { content, chatId } = req.body;
+  const { content, chatId, type } = req.body;
 
-  if (!content || !chatId) {
-    return next(new CustomErrorHandler("Chat Id or content cannot be empty!", 400));
+  if (!chatId) {
+    return next(new CustomErrorHandler("Chat Id cannot be empty!", 400));
   }
 
   var newMessage = {
@@ -75,7 +76,27 @@ export const sendMessage = async (
   };
 
   try {
-    var message: any = await Message.create(newMessage);
+    var message: any;
+    if (type === "image") {
+      const url = await v2.uploader.upload(req.file.path);
+      const localFilePath = req.file.path;
+      fs.unlink(localFilePath, (err) => {
+        if (err) {
+          console.error(`Error deleting local file: ${err.message}`);
+        } else {
+          console.log(`Local file deleted: ${localFilePath}`);
+        }
+      });
+      var newImageMessage = {
+        sender: req.id,
+        image: { public_Id: url.public_id, url: url.url },
+        chat: chatId,
+      };
+      message = await Message.create(newImageMessage);
+      console.log({ message });
+    } else {
+      message = await Message.create(newMessage);
+    }
 
     message = await message.populate("sender chat", "username pic");
     // message = await message.populate("chat")
@@ -269,9 +290,15 @@ export const updateMessageStatusAsUnsent = async (
   next: NextFunction
 ) => {
   try {
-    const { messageId, status } = req.body;
+    const { messageId, status,chatId } = req.body;
+     
+
     if (!status || !messageId)
       return next(new CustomErrorHandler("Message Id or status  cannot be empty!", 400));
+    const chat = await Chat.findById(chatId)?.populate("latestMessage");
+    if (chat?.latestMessage?._id.toString() === messageId) {
+      return next(new CustomErrorHandler("You cannot remove the latestMessage", 400));
+    }
     const updateMessage = await Message.updateOne(
       { _id: messageId },
       { $set: { status: "unsent", unsentBy: req.id, content: "unsent" } }
@@ -316,18 +343,43 @@ export const replyMessage = async (
   next: NextFunction
 ) => {
   try {
-    const { chatId, messageId, content } = req.body;
-    if (!chatId || !messageId || !content)
-      return next(
-        new CustomErrorHandler("messageId  or chatId or content cannot be empty!", 400)
-      );
-    let message: any = await Message.create({
-      sender: req.id,
-      isReply: { repliedBy: req.id, messageId },
-      content,
+    const { chatId, messageId, content, type } = req.body;
+    if (!chatId || !messageId) {
+      return next(new CustomErrorHandler("messageId  or chatId cannot be empty!", 400));
+    }
 
-      chat: chatId,
-    });
+    let message: any;
+    if (type === "image") {
+      if (!req.file.path) {
+        return next(new CustomErrorHandler("Image  cannot be empty!", 400));
+      }
+      const url = await v2.uploader.upload(req.file.path);
+      const localFilePath = req.file.path;
+      fs.unlink(localFilePath, (err) => {
+        if (err) {
+          console.error(`Error deleting local file: ${err.message}`);
+        } else {
+          console.log(`Local file deleted: ${localFilePath}`);
+        }
+      });
+
+      message = await Message.create({
+        sender: req.id,
+        isReply: { repliedBy: req.id, messageId },
+        image: { public_Id: url.public_id, url: url.url },
+
+        chat: chatId,
+      });
+    } else {
+      message = await Message.create({
+        sender: req.id,
+        isReply: { repliedBy: req.id, messageId },
+        content,
+
+        chat: chatId,
+      });
+    }
+
     message = await message.populate("sender chat", "username pic");
     // message = await message.populate("chat")
     message = await User.populate(message, {
@@ -350,17 +402,55 @@ export const editMessage = async (
   next: NextFunction
 ) => {
   try {
-    const { messageId, content } = req.body;
-    if (!messageId || !content)
-      return next(new CustomErrorHandler("messageId  or content cannot be empty!", 400));
-    const editedChat = await Message.findByIdAndUpdate(
-      messageId,
-      {
-        isEdit: { editedBy: req.id },
-        content,
-      },
-      { new: true }
-    );
+    const { messageId, content, type } = req.body;
+    if (!messageId)
+      return next(new CustomErrorHandler("messageId  cannot be empty!", 400));
+
+    const prevMessage: any = await Message.findById(messageId);
+    //delete Previous Image
+    if (prevMessage.image?.public_Id) {
+      await v2.uploader.destroy(prevMessage.image?.public_Id);
+    }
+    let editedChat: any;
+    if (type === "image") {
+      if (!messageId || !req.file.path) {
+        return next(new CustomErrorHandler("messageId or file cannot be empty!", 400));
+      }
+
+      const url = await v2.uploader.upload(req.file.path);
+      const localFilePath = req.file.path;
+      fs.unlink(localFilePath, (err) => {
+        if (err) {
+          console.error(`Error deleting local file: ${err.message}`);
+        } else {
+          console.log(`Local file deleted: ${localFilePath}`);
+        }
+      });
+
+      editedChat = await Message.findByIdAndUpdate(
+        messageId,
+        {
+          isEdit: { editedBy: req.id },
+          image: { public_Id: url.public_id, url: url.url },
+        },
+        { new: true }
+      );
+    } else {
+      if (!messageId || !content)
+        return next(
+          new CustomErrorHandler("messageId or content  cannot be empty!", 400)
+        );
+
+      editedChat = await Message.findByIdAndUpdate(
+        messageId,
+        {
+          isEdit: { editedBy: req.id },
+          content,
+        },
+        { new: true }
+      );
+    }
+
     res.status(200).json({ success: true, editedChat });
   } catch (error) {
     next(error);

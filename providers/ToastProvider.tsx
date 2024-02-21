@@ -8,7 +8,7 @@ const ToastProvider = ({children}:{children:ReactNode}) => {
     <>
       {children}
       <ToastContainer
-        position="top-left"
+        position="top-center"
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop={false}
@@ -17,7 +17,7 @@ const ToastProvider = ({children}:{children:ReactNode}) => {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light"
+        theme="dark"
         transition={Bounce}
       />
     </>

@@ -13,11 +13,14 @@ import {
   updateMessageStatusAsRemove,
   updateMessageStatusAsUnsent,
 } from "../controllers/messageController";
+import uploadMiddleware from "../middlewares/uploadMiddleware";
 
 const messageRoute = express.Router();
 
 messageRoute.route("/allmessages/:chatId").get(authMiddleware, allMessages);
-messageRoute.route("/sentmessage").post(authMiddleware, sendMessage);
+messageRoute
+  .route("/sentmessage")
+  .post(authMiddleware, uploadMiddleware.single("image"), sendMessage);
 messageRoute
   .route("/updateMessageStatus")
   .patch(authMiddleware, updateChatMessageController);
@@ -48,9 +51,13 @@ messageRoute
   .put(authMiddleware, updateChatStatusAsBlockOrUnblock);
 //editMessage
 
-messageRoute.route("/editMessage").put(authMiddleware, editMessage);
+messageRoute
+  .route("/editMessage")
+  .put(authMiddleware, uploadMiddleware.single("image"), editMessage);
 //replyMessage
-messageRoute.route("/replyMessage").post(authMiddleware, replyMessage);
+messageRoute
+  .route("/replyMessage")
+  .post(authMiddleware, uploadMiddleware.single("image"), replyMessage);
 
 //addRemoveEmojiReactions
 

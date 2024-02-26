@@ -1,40 +1,36 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 
-import { useUserStore } from "@/store/useUser";
 import { useChatStore } from "@/store/useChat";
 import dynamic from "next/dynamic";
 const InfiniteScroll = dynamic(() => import("react-infinite-scroll-component"));
 const MessageCard = dynamic(() => import("./MessageCard"));
 import { allMessages } from "@/functions/messageActions";
 import { FaArrowDown } from "react-icons/fa";
-import Loader from "../Loader";
-import { uuid } from "uuidv4";
-import NoChatProfile from "../NoChatProfile";
+const NoChatProfile = dynamic(() => import("../NoChatProfile"));
 const Messages = () => {
-  const { currentUser } = useUserStore();
-
   const { selectedChat } = useChatStore();
-  const { data, fetchNextPage, hasNextPage, isFetching, isLoading } = useInfiniteQuery({
-    queryKey: ["messages", selectedChat?.chatId],
+  const { data, fetchNextPage, hasNextPage, isLoading, isFetching } =
+    useInfiniteQuery({
+      queryKey: ["messages", selectedChat?.chatId],
 
-    queryFn: allMessages as any,
+      queryFn: allMessages as any,
 
-    getNextPageParam: (lastPage: any) => {
-      const { prevOffset, total, limit } = lastPage;
-      // Calculate the next offset based on the limit
-      const nextOffset = prevOffset + limit;
+      getNextPageParam: (lastPage: any) => {
+        const { prevOffset, total, limit } = lastPage;
+        // Calculate the next offset based on the limit
+        const nextOffset = prevOffset + limit;
 
-      // Check if there are more items to fetch
-      if (nextOffset >= total) {
-        return;
-      }
+        // Check if there are more items to fetch
+        if (nextOffset >= total) {
+          return;
+        }
 
-      return nextOffset;
-    },
-    initialPageParam: 0,
-  });
+        return nextOffset;
+      },
+      initialPageParam: 0,
+    });
 
   // const messages = data?.pages.flatMap((page) => page.messages);
   const messages = [].concat(...(data?.pages.map((page) => page.messages) ?? []));
@@ -42,9 +38,7 @@ const Messages = () => {
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(0);
-
   useEffect(() => {
     const container = containerRef.current as any;
     //check if scroll up greater than -200
@@ -76,6 +70,8 @@ const Messages = () => {
           container.scrollHeight - container.clientHeight <= container.scrollTop + 1;
 
         setShowScrollToBottomButton(!isAtBottom);
+
+        
       }
     };
     // const container = containerRef.current;
@@ -95,15 +91,6 @@ const Messages = () => {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    let element = e.currentTarget;
-    if (element.scrollTop === 0 && hasNextPage) {
-      console.log("scrolling");
-      //fetchHere when scrolling up
-    }
-  };
- 
-
   return (
     <>
       <div
@@ -117,9 +104,11 @@ const Messages = () => {
           className="menu p-4 bg-base-200 h-[80vh] overflow-y-scroll overflow-x-hidden flex flex-col-reverse"
         >
           <div className="init_profile">
-            {messages.length === 0 && !isLoading && (
+            {/* {messages.length === 0 && !isLoading && (
               <NoChatProfile user={selectedChat as any} />
-            )}{" "}
+            )}{" "} */}
+
+            {/* <NoChatProfile user={selectedChat as any} /> */}
           </div>
           <InfiniteScroll
             dataLength={messages ? messages?.length : 0}
@@ -134,7 +123,8 @@ const Messages = () => {
               <div className="m-4 h-8 w-8 block mx-auto animate-spin rounded-full border-4 border-blue-500  border-r-transparent align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
             }
             endMessage={
-              !isLoading && (
+              !isLoading &&
+              messages.length > 10 && (
                 <h1 className="text-green-400 text-center p-2 text-sm md:text-xl">
                   <b>Yay! You have seen it all</b>
                 </h1>
@@ -147,7 +137,7 @@ const Messages = () => {
           >
             <div className="flex flex-col gap-5">
               {isLoading ? (
-                <div className="m-8 mb-30 h-10 w-10 block mx-auto animate-spin rounded-full border-4 border-blue-500  border-r-transparent  align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+                <div className="m-8 mb-32 h-10 w-10 block mx-auto animate-spin rounded-full border-4 border-blue-500  border-r-transparent  align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
               ) : (
                 messages &&
                 messages.length &&
@@ -167,6 +157,7 @@ const Messages = () => {
               </button>
             )}
           </InfiniteScroll>
+          {!hasNextPage&&!isFetching&&!isLoading &&  <NoChatProfile user={selectedChat as any} />}
         </div>
       </div>
     </>

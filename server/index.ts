@@ -58,7 +58,7 @@ const removeUser = async (socketId: string) => {
 
     try {
       //update lastActivity time
-       await User.findOneAndUpdate(
+      await User.findOneAndUpdate(
         { _id: removedUser.id },
         { $set: { lastActive: new Date(Date.now()) } },
         { new: true }
@@ -120,7 +120,29 @@ io.on("connection", (socket: Socket) => {
       socket.in(data.receiverId).emit("stopTyping", data);
     }
   });
+  //@@@@@@ calling system start
 
+  socket.on("user:call", ({ to, offer, user, chatId }) => {
+    io.to(to).emit("incomming:call", { from: user._id, offer, user, chatId }); //from=socket.id prev
+  });
+  socket.on("call:rejected", ({ to, user }) => {
+    io.to(to).emit("call:rejected", { from: user._id, user });
+  });
+  socket.on("call:accepted", ({ to, ans, user }) => {
+    // console.log({ to, ans, user });
+    io.to(to).emit("call:accepted", { from: user._id, ans });
+  });
+
+  socket.on("peer:nego:needed", ({ to, offer, user }) => {
+    console.log("peer:nego:needed", offer);
+    io.to(to).emit("peer:nego:needed", { from: user._id, offer,user });
+  });
+
+  socket.on("peer:nego:done", ({ to, ans, user }) => {
+    console.log("peer:nego:done", ans);
+    io.to(to).emit("peer:nego:final", { from: user._id, ans });
+  });
+  //@@@@@@ calling system end
   // Handle client disconnection
   socket.on("disconnect", async (data) => {
     await removeUser(socket.id);

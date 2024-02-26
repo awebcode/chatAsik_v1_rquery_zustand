@@ -1,6 +1,5 @@
-import React from 'react'
-import Login from '../components/Login'
-
+import dynamic from "next/dynamic";
+const Login = dynamic(() => import("../components/Login"));
 const page = () => {
   return (
     <div><Login/></div>

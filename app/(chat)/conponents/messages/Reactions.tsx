@@ -70,7 +70,7 @@ const Reactions = ({
           <div className="">
             {message.reactions.map((v: any, i: any) => {
               return (
-                <div className="flexBetween gap-2 hover:bg-gray-700 duration-300 p-3 rounded-md">
+                <div key={i} className="flexBetween gap-2 hover:bg-gray-700 duration-300 p-3 rounded-md">
                   <div className="left p-2 flex">
                     {" "}
                     <div className="h-8 w-8 relative rounded-full ring-2 ring-violet-600">

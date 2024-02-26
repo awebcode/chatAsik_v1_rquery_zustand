@@ -6,15 +6,17 @@ import Image from "next/image";
 import React, { useState } from "react";
 import moment from "moment";
 import { useTypingStore } from "@/store/useTyping";
-import TypingIndicatot from "../TypingIndicator";
 import { useOnlineUsersStore } from "@/store/useOnlineUsers";
 import { renderStatus } from "../logics/renderStatus";
 import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
 import { updateAllMessageStatusAsSeen } from "@/functions/messageActions";
 import { getSender, getSenderFull } from "../logics/logics";
 import { BsThreeDots } from "react-icons/bs";
-import Modal from "./Modal";
 import { useClickAway } from "@uidotdev/usehooks";
+import dynamic from "next/dynamic";
+import { redirect, useRouter } from "next/navigation";
+const Modal = dynamic(() => import("./Modal"));
+const TypingIndicator = dynamic(() => import("../TypingIndicator"));
 type Tuser = {
   username: string;
   email: string;
@@ -32,6 +34,7 @@ const FriendsCard: React.FC<{
   chat: TChat | any;
   unseenArray: any;
 }> = ({ chat, unseenArray }) => {
+  const router=useRouter()
   const { socket } = useChatContext();
   const { setSelectedChat } = useChatStore();
   const { currentUser } = useUserStore();
@@ -82,8 +85,8 @@ const FriendsCard: React.FC<{
         socket.emit("setup", { id: chat?._id } as any);
       }
       setSelectedChat(chatData);
-
       queryclient.invalidateQueries({ queryKey: ["messages"] });
+      router.push(`/Chat?chatId=${chat?._id}`);
     },
   });
 
@@ -144,15 +147,21 @@ const FriendsCard: React.FC<{
             <h3 className="text-xs md:text-sm font-bold">
               {!chat.isGroupChat ? getSender(currentUser, chat.users) : chat.chatName}
             </h3>
-
-            <span className="text-xs font-bold">
+            <span
+              className={`text-xs md:text-sm ${
+                chat?.latestMessage?.status === "delivered" &&
+                chat?.latestMessage?.sender?._id !== currentUser?._id
+                  ? "font-bold"
+                  : ""
+              }`}
+            >
               {isTyping && typingContent && typingChatId === chat?._id ? (
-                <TypingIndicatot />
+                <TypingIndicator />
               ) : chat?.latestMessage?.content ? (
                 chat?.latestMessage?.content?.length > 20 ? (
                   chat?.latestMessage?.content?.substring(0, 15) + "..."
                 ) : (
-                  chat?.latestMessage?.content?.substring(0, 15)
+                  chat?.latestMessage?.content
                 )
               ) : chat?.latestMessage?.image ? (
                 <span>

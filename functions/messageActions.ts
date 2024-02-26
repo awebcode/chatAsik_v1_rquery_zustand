@@ -6,7 +6,8 @@ export const allMessages = async ({
 }: {
   pageParam: any;
   queryKey: any;
-}) => {
+  }) => {
+  console.log({ queryKey });
   const { data } = await axiosClient.get(
     `/allMessages/${queryKey[1]}?skip=${pageParam}&limit=${10}`,
     {

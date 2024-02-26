@@ -3,8 +3,8 @@ import useEditReplyStore from "@/store/useEditReply";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import React, { useState } from "react";
-import { AiOutlineClose, AiOutlineCloudUpload } from "react-icons/ai";
-import { BsCloud } from "react-icons/bs";
+import { AiOutlineCloudUpload } from "react-icons/ai";
+
 
 const ImageMessage = ({
   mutation,
@@ -18,7 +18,7 @@ const ImageMessage = ({
   const { cancelEdit, cancelReply, isEdit, isReply, isSentImageModalOpen } =
     useEditReplyStore();
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReply) {
+    if (isReply || isEdit) {
       useEditReplyStore.setState({ isSentImageModalOpen: true });
     }
 
@@ -49,6 +49,7 @@ const ImageMessage = ({
       useEditReplyStore.setState({ isSentImageModalOpen: false });
       return;
     } else if (isEdit) {
+      //edit image message
       const editData = {
         messageId: isEdit?._id,
         type: "image",
@@ -56,6 +57,7 @@ const ImageMessage = ({
       };
       editmutation.mutateAsync(editData as any);
       cancelEdit();
+      useEditReplyStore.setState({ isSentImageModalOpen: false });
       return;
     } else {
       const messageData = {

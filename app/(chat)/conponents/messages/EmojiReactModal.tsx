@@ -1,11 +1,15 @@
 import React from "react";
-import { MdAdd, MdClose, MdOutlineEmojiEmotions } from "react-icons/md";
-import EmojiPicker, {
-  Theme,
-  EmojiStyle,
-  SuggestionMode,
-  Categories,
-} from "emoji-picker-react";
+import { MdAdd } from "react-icons/md";
+import dynamic from "next/dynamic";
+const EmojiPicker = dynamic(
+  () => {
+    return import("emoji-picker-react").then((module) => {
+      return module.default || module;
+    });
+  },
+  { ssr: false, loading: () => <h1>Loading...</h1> }
+);
+import { Theme, EmojiStyle, SuggestionMode } from "emoji-picker-react";
 
 const EmojiReactModal = ({
   message,
@@ -27,7 +31,7 @@ const EmojiReactModal = ({
         <div className="flexBetween flex-row w-full gap-x-2">
           {["🙂", "😍", "❤", "😠", "😜"].map((v, i: number) => {
             return (
-              <>
+              <div key={i}>
                 {" "}
                 <span
                   onClick={() => {
@@ -36,13 +40,12 @@ const EmojiReactModal = ({
                     // setOpenReactModal(false);
                     // setOpenEmojiModal(false);
                   }}
-                  key={i}
                   className={`text-gray-300 h-6 w-6 mr-1 cursor-pointer transition-all duration-500 hover:scale-105`}
                 >
                   {" "}
                   {v}
                 </span>
-              </>
+              </div>
             );
           })}
           <span ref={emojiModalRef} className="p-2 rounded-full bg-gray-700">

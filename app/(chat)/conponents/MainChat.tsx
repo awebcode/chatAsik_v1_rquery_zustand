@@ -7,7 +7,9 @@ const Messages = dynamic(() => import("./messages/Messages"));
 const Input = dynamic(() => import("./Input"));
 import { useChatStore } from "@/store/useChat";
 import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
-
+// import PrefetchMessages from "./messages/PrefetchMessages";
+import ClientWrap from "./ClientWrap";
+// const PrefetchMessages = dynamic(() => import("./messages/PrefetchMessages"));
 const MainChat = () => {
   const { selectedChat } = useChatStore();
   const { socket } = useChatContext();
@@ -33,6 +35,7 @@ const MainChat = () => {
   return (
     <div className="relative p-4 w-full border-2 rounded-md border-blue-800 hover:border-violet-500 transition-all duration-500 m-3">
       <ChatHeader />
+      {/* prefetch messagee */}
       <Messages />
       <div className="absolute bottom-1 w-[96%]">
         <Input />

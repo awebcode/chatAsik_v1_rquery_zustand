@@ -1,17 +1,13 @@
 import { useChatStore } from "@/store/useChat";
 import Image from "next/image";
 import React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateChatStatusAsBlockOUnblock } from "@/functions/messageActions";
-import { toast } from "react-toastify";
+
 import { useUserStore } from "@/store/useUser";
-import { deleteSingleChat } from "@/functions/chatActions";
 import {
   useBlockMutation,
   useDeleteSingleChatMutation,
 } from "../mutations/chatMutations";
 const UserModal = ({ open, setOpen, isUserOnline }: any) => {
-  const queryclient = useQueryClient();
   const { selectedChat, setSelectedChat } = useChatStore();
   const { currentUser } = useUserStore();
   const blockMutation = useBlockMutation();
@@ -31,7 +27,7 @@ const UserModal = ({ open, setOpen, isUserOnline }: any) => {
   };
   return (
     <div
-      className={`z-50 fixed max-h-screen max-w-3xl p-10 px-14 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded duration-500  ${
+      className={`z-50 fixed max-h-screen max-w-3xl p-10 px-14 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded duration-500 ring-2 ring-blue-500  ${
         open ? "block opacity-100 duration-300" : "hidden opacity-0 duration-300"
       }`}
     >

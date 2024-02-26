@@ -6,11 +6,12 @@ import Image from "next/image";
 import React from "react";
 import moment from "moment";
 import { useTypingStore } from "@/store/useTyping";
-import TypingIndicatot from "./TypingIndicator";
 import { useOnlineUsersStore } from "@/store/useOnlineUsers";
-import { renderStatus } from "./logics/renderStatus";
+import { renderStatus } from "../logics/renderStatus";
 import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
 import { updateAllMessageStatusAsSeen } from "@/functions/messageActions";
+import dynamic from "next/dynamic";
+const TypingIndicator = dynamic(() => import("../TypingIndicator"));
 type Tuser = {
   username: string;
   email: string;
@@ -66,7 +67,7 @@ const FriendsCard: React.FC<{
         userId: user?._id,
         pic: user?.pic,
       };
-      setSelectedChat(chatData);
+      setSelectedChat(chatData as any);
       queryclient.invalidateQueries({ queryKey: ["messages"] });
     },
   });
@@ -125,7 +126,7 @@ const FriendsCard: React.FC<{
 
           <span className="text-xs font-bold">
             {isTyping && typingContent && typingUserId === user?._id ? (
-              <TypingIndicatot />
+              <TypingIndicator />
             ) : chat?.latestMessage?.content ? (
               chat?.latestMessage?.content
             ) : (

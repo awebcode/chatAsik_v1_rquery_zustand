@@ -12,7 +12,7 @@ const MyFriends = () => {
   const { currentUser } = useUserStore();
   const [searchTerm, setSearchTerm] = useState("");
   const searchText = useDebounce(searchTerm, 600);
-  const { data, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery({
+  const { data, isFetching, isLoading, fetchNextPage, hasNextPage } = useInfiniteQuery({
     queryKey: ["messages", searchText, "messages"],
 
     queryFn: getChats as any,
@@ -35,7 +35,9 @@ const MyFriends = () => {
     setSearchTerm(e.target.value);
   };
   const chats = data?.pages.flatMap((page) => page.chats);
-
+  if (isLoading) {
+    return <h1 className="text-center p-2 text-2xl">Fetching friends...</h1>;
+  }
   return (
     <>
       <div>

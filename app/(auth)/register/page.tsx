@@ -1,6 +1,5 @@
-import React from 'react'
-import Register from '../components/Register'
-
+import dynamic from "next/dynamic";
+const Register = dynamic(() => import("../components/Register"));
 const page = () => {
   return (
     <div><Register/></div>

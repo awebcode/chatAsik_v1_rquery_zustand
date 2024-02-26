@@ -26,7 +26,7 @@ const UserCard: React.FC<{ user: Tuser; setIsOpen: any }> = ({ user, setIsOpen }
         userId: user?._id,
         pic: user?.pic,
       };
-      setSelectedChat(chatData);
+      setSelectedChat(chatData as any);
       setIsOpen(false);
 
       queryclient.invalidateQueries({ queryKey: ["messages"] });

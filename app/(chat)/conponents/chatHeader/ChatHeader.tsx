@@ -4,19 +4,25 @@ import Image from "next/image";
 import React, { useState } from "react";
 import { FaArrowLeft, FaBeer } from "react-icons/fa";
 import { BsThreeDots } from "react-icons/bs";
-import UserModal from "./UserModal";
 import { useClickAway } from "@uidotdev/usehooks";
 import { MdCall, MdVideoCall } from "react-icons/md";
 
+import dynamic from "next/dynamic";
+const VideoCallModal = dynamic(() => import("./VideoCallModal"));
+const UserModal = dynamic(() => import("./UserModal"));
 const ChatHeader = () => {
   const { selectedChat, clearselectedChat } = useChatStore();
   const { onlineUsers } = useOnlineUsersStore();
   const [open, setOpen] = useState(false);
+  const [openVideoCall, setOpenVideoCall] = useState(false);
   const isUserOnline = onlineUsers.some((u: any) => u.id === selectedChat?.userId);
   const userModalRef: any = useClickAway(() => {
     setOpen(false);
   });
 
+  const videoCallModalRef: any = useClickAway(() => {
+    setOpenVideoCall(false);
+  });
   return (
     <div className="p-4 bg-gray-800 flexBetween rounded">
       <div className="flex items-center gap-2">
@@ -63,10 +69,17 @@ const ChatHeader = () => {
           onClick={() => setOpen((prev) => !prev)}
           className="h-6 w-6 text-white cursor-pointer"
         />
-        <MdVideoCall
-          onClick={() => setOpen((prev) => !prev)}
-          className="h-6 w-6 text-white cursor-pointer"
-        />
+        <span ref={videoCallModalRef} className="cursor-pointer">
+          <MdVideoCall
+            onClick={() => setOpenVideoCall((prev) => !prev)}
+            className="h-6 w-6 text-white cursor-pointer"
+          />
+          <VideoCallModal
+            openVideoCall={openVideoCall}
+            setOpenVideoCall={setOpenVideoCall}
+            isUserOnline={isUserOnline}
+          />
+        </span>
         <span ref={userModalRef} className="cursor-pointer">
           <BsThreeDots
             onClick={() => setOpen((prev) => !prev)}

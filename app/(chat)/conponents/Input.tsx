@@ -2,38 +2,38 @@
 import React, {
   ChangeEvent,
   KeyboardEvent,
-  MutableRefObject,
-  useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { toast } from "react-toastify";
-import EmojiPicker, {
-  Theme,
-  EmojiStyle,
-  SuggestionMode,
-  Categories,
-} from "emoji-picker-react";
+import dynamic from "next/dynamic";
+const EmojiPicker = dynamic(
+  () => {
+    return import("emoji-picker-react").then((module) => {
+      return module.default || module;
+    });
+  },
+  { ssr: false, loading: () => <h1>Loading...</h1> }
+);
+import { Theme, EmojiStyle, SuggestionMode } from "emoji-picker-react";
+
+
 import { useClickAway } from "@uidotdev/usehooks";
 import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
-import { join } from "path";
-import { uuid } from "uuidv4";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   editMessage,
   replyMessage,
   sentMessage,
-  updateMessageStatus,
 } from "@/functions/messageActions";
 import { useChatStore } from "@/store/useChat";
-import useMessageStore from "@/store/useMessage";
 import { useUserStore } from "@/store/useUser";
 import { useTypingStore } from "@/store/useTyping";
 import TypingIndicatot from "./TypingIndicator";
 import useEditReplyStore from "@/store/useEditReply";
 import { IoMdClose, IoMdPhotos } from "react-icons/io";
-import { MdAddAPhoto, MdOutlineKeyboardVoice, MdVoiceChat } from "react-icons/md";
+import { MdAddAPhoto } from "react-icons/md";
 import { RiEmojiStickerLine } from "react-icons/ri";
 import ChatStatus from "./ChatStatus";
 import AudioVoice from "./audioVoice/Voice";
@@ -344,6 +344,7 @@ const Input = () => {
                 🙂
               </button>
               <EmojiPicker
+                
                 open={openEmoji}
                 style={{
                   position: "absolute",

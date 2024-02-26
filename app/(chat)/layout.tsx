@@ -5,9 +5,5 @@ export default function ChatLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-   
-        <ChatContextProvider>{children}</ChatContextProvider>
-     
-  );
+  return <ChatContextProvider>{children}</ChatContextProvider>;
 }

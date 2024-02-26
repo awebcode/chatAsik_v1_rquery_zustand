@@ -18,10 +18,10 @@ import { useChatContext } from "@/context/ChatContext/ChatContextProvider";
 import { MdOutlineEmojiEmotions } from "react-icons/md";
 
 import { useAddRemoveReactionMutation } from "../mutations/messageMutations";
-import { useOnlineUsersStore } from "@/store/useOnlineUsers";
+import dynamic from "next/dynamic";
 
-import Reactions from "./Reactions";
-import EmojiReactModal from "./EmojiReactModal";
+const Reactions = dynamic(() => import("./Reactions"));
+const EmojiReactModal = dynamic(() => import("./EmojiReactModal"));
 type TMessage = {
   _id: string;
   content: string;
